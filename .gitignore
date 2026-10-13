@@ -1,0 +1,8 @@
+.venv/
+.env
+.earth_token_cache.json
+__pycache__/
+.DS_Store
+outputs/
+.ipynb_checkpoints/
+.cursor/
