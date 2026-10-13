@@ -1,181 +1,161 @@
-# Earth DS Workshop — Churn Prediction
+# Earth DS Workshop — Churn Prediction (S4: from the Earth UI to the API)
 
 ## What you will build
 
-A binary customer churn classifier, optimized for validation F1 with Earth GA,
-then scored once on an untouched holdout. The ML problem stays simple so you can
-practice the full DS pathway with a coding agent.
+The same churn search you ran in the Earth UI, now driven from code through the
+Earth API: upload the data, launch the search, read the champion, check it, and
+score it once on the locked test set.
+
+The decision: each month the retention team calls the **400 customers most likely
+to leave**. The metric is **hit@400**, the share of those 400 who actually churn.
 
 ## What you will learn
 
-- How to partner with a coding agent on a DS project without giving up reasoning
-- A lightweight DS delivery path: Frame → Explore → Baseline → Formulate → Earth → Validate → Deliver
-- Earth UI and Earth API as the optimization stage
-
-Detailed practices: [context/workshop_pathway.md](context/workshop_pathway.md) and
-[context/methods/PROJECT_DELIVERY_PRACTICES_ONE_PAGER.md](context/methods/PROJECT_DELIVERY_PRACTICES_ONE_PAGER.md).
+- How to drive an Earth search end to end through the REST API
+- How to check that an API run matches a UI run (same chromosome, fitness, GA settings)
+- How to read a champion critically: search optimism, fresh split seeds, one test read
+- How to partner with a coding agent without giving up the DS decisions
 
 Project framing: [context/project_context.md](context/project_context.md).
-
-Workshop tags and teacher vs student updates:
-[context/WORKSHOP_STATE_MANAGEMENT.md](context/WORKSHOP_STATE_MANAGEMENT.md).
+Pathway and rules: [context/workshop_pathway.md](context/workshop_pathway.md).
 
 ## Repository structure
 
 ```text
-data/                   Excel tables + data_context.md
+data/                   train_clean.csv, test_clean.csv, test_ids.csv, data_dictionary.md
+earth/                  Earth REST client, chromosome.yaml + fitness.py (from the UI run),
+                        run_search.py, connection and chromosome checks
 context/                Project context, pathway, state management, DS practices
 context/template_churn/ Reference chromosome/fitness examples (not runtime)
-earth/                  Earth REST client + connection check
 work/                   Your work (empty at start except framing.md)
 ```
 
-Start from tag `workshop-1-start-v3` (this tree). Do not check out the solution
-tag during the exercise.
+## Data
+
+The data was cleaned and split in S1/S2. Do not re-split it.
+
+| File | Rows | Role |
+|------|------|------|
+| `data/train_clean.csv` | 5,638 | Everything before the final check: search, baselines, re-checks |
+| `data/test_ids.csv` | 1,415 | Customer IDs only; uploaded with train so the fitness drops the 10 customers shared with test |
+| `data/test_clean.csv` | 1,415 | Locked test set with labels; scored **once**, at the end; never uploaded to Earth |
+
+Column meanings: [data/data_dictionary.md](data/data_dictionary.md).
 
 ## Prerequisites
 
 - Python 3.12
 - An Earth account (`EARTH_USER` / `EARTH_PASS`)
 
-## Setup
+## Pathway
 
-### Student checkout
+Work under `work/`. Ask your coding agent to implement each step after you make
+the DS decisions. Read the code, run it, then continue.
+
+### 1. Set up
 
 ```bash
-git checkout workshop-1-start-v3
+git checkout s4
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # set EARTH_USER / EARTH_PASS
 python earth/check_connection.py
 ```
 
-Use Python 3.12. `.venv/` is local and is not committed.
-
-`python --version` should print Python 3.12.x after activate.
-
-If `python3.12` is not on your `PATH`, create the environment with a Python 3.12
-interpreter you already have. For a pyenv install of 3.12.3:
-
-```bash
-~/.pyenv/versions/3.12.3/bin/python -m venv .venv
-source .venv/bin/activate
-```
-
+`python --version` should print Python 3.12.x after activate. If `python3.12` is
+not on your `PATH`, create the environment with a Python 3.12 interpreter you
+already have (for example `~/.pyenv/versions/3.12.3/bin/python -m venv .venv`).
 On Windows, activate with `.venv\Scripts\activate`.
 
-## Verify Earth connection
+Expected from `check_connection.py`: authentication succeeds, the template GET
+returns 200, and `running-count` prints. No dataset or experiment is created.
+
+### 2. Look at the data
+
+Open `data/train_clean.csv` with [data/data_dictionary.md](data/data_dictionary.md)
+beside it. Check shape, churn rate (about 26.5%), and the 19 feature columns the
+fitness uses. Fill [work/framing.md](work/framing.md).
+
+### 3. Read the chromosome and fitness from the UI run
+
+`earth/chromosome.yaml` and `earth/fitness.py` are the files you ran in the Earth
+UI. Read them before running anything: which genes Earth may change, which
+features the mask covers, how hit@400 is computed (5 stratified folds, seed 42,
+top 80 per validation fold), and the GA settings in the `ai1` block.
+
+### 4. Validate the chromosome
 
 ```bash
-python earth/check_connection.py
+python earth/validate_chromosome.py earth/chromosome.yaml
 ```
 
-Expected: authentication succeeds, the template GET returns 200, and
-`running-count` prints. No dataset or experiment is created.
+### 5. Smoke-test the fitness locally
 
-## Project pathway
+Copy `data/train_clean.csv` and `data/test_ids.csv` into a temporary folder and
+call `FitnessClass(folder).calculate_fitness(chromosome)` on one chromosome.
+Expect a finite score between 0 and 1 and 5,628 training rows. A random list
+scores about 0.27; logistic regression about 0.76.
 
-Work under `work/`. Ask your coding agent to implement each step after you make
-the DS decisions. Read the code, run it, then continue.
-
-### 1. Frame
-
-Read [context/project_context.md](context/project_context.md). Fill
-[work/framing.md](work/framing.md): target, metric, feature boundary, workshop
-data assumption.
-
-### 2. Explore
-
-Build a short loader under `work/exploration/`. Join the five-table module.
-Check shape, target balance, missingness, types, and exclusions. Freeze
-`train.csv` and `holdout.csv`. There is another conflicting consolidated extract
-(`Telco_customer_churn.xlsx`); it is deliberately not our modeling source.
-
-### 3. Baseline
-
-Implement a fixed sklearn logistic pipeline under `work/modeling/`. Score F1 on
-`validation` cut from `train.csv`. Do not read `holdout.csv`.
-
-### 4. Formulate
-
-Write what Earth may change and what stays fixed. Read
-[context/template_churn/](context/template_churn/) as reference, then create a
-**reduced** chromosome under `work/modeling/`.
-
-### 5. Package
-
-Write `FitnessClass` that scores F1 on `validation` from the uploaded train CSV.
-Smoke-test locally. Validate the chromosome:
+### 6. Run the search through the API
 
 ```bash
-python earth/validate_chromosome.py work/modeling/chromosome.yaml
+python earth/run_search.py
 ```
 
-### 6. Earth
+It uploads `train_clean.csv` + `test_ids.csv`, launches with the UI run's GA
+settings, polls until Earth stops, and writes `work/optimization/earth_ids.json`
+and `work/optimization/champion_chromosome.json`. Watch the generations in the
+Earth UI.
 
-Launch through the API (`earth/run_search.py` once you have it). Watch generations
-in the Earth UI. Save the experiment id and champion chromosome.
+### 7. Read the champion
 
-### 7. Validate
+Open both JSON files. Check `test_ids_uploaded` is `true` in `earth_ids.json`;
+if it is `false`, the search trained on the 10 shared customers. Write down the
+champion's model family, features, and per-fold hit rates.
 
-Refit baseline and champion on all of `train.csv`. Score both once on
-`holdout.csv`. Search fitness and holdout F1 are different numbers.
+### 8. Re-check on fresh split seeds
 
-### 8. Deliver
+The search score is optimistic: Earth picked the best of many candidates on the
+same five folds. Re-score the champion and the logistic-regression baseline on
+`train_clean.csv` with new fold seeds. Keep the champion only if it still beats
+the baseline.
 
-Write `work/delivery/report.md` with framing, baseline, formulation, Earth ids,
-champion config, holdout metrics, a conclusion, and:
+### 9. Score once on the test set
 
-> If you ran a second optimization experiment, what additional decision would you
-> allow Earth to evolve?
+Fit the champion and the baseline on all of `train_clean.csv` and score both
+once on `data/test_clean.csv`. Search score, fresh-seed score, and test score are
+different numbers.
+
+### 10. Report
+
+Write `work/delivery/report.md`: framing, baseline, Earth ids, champion
+configuration, search vs fresh-seed vs test hit@400, and a conclusion.
 
 ## Working with your coding agent
 
-You own problem meaning, feature boundaries, the metric, chromosome vs fixed
-choices, and whether the champion generalized. The agent may inspect files,
-implement code, run checks, and draft documentation. See
+You own problem meaning, the feature boundary, the metric, what Earth may change
+vs what stays fixed, and whether the champion held up. The agent may inspect
+files, implement code, run checks, and draft documentation. See
 [context/workshop_pathway.md](context/workshop_pathway.md).
 
 ## Expected outputs
 
 | After | Under `work/` |
 |-------|----------------|
-| Frame | Completed `framing.md` |
-| Explore | `exploration/train.csv`, `exploration/holdout.csv`, split metadata |
-| Baseline | Modeling scripts + validation metrics |
-| Formulate / Package | `modeling/chromosome.yaml`, `modeling/fitness.py`, `modeling/pipeline.py` |
-| Earth | Experiment id + champion JSON |
-| Validate / Deliver | Holdout comparison + `delivery/report.md` |
+| Look at the data | Completed `framing.md` |
+| Run the search | `optimization/earth_ids.json`, `optimization/champion_chromosome.json` |
+| Re-check / test | Fresh-seed and test hit@400 for champion and baseline |
+| Report | `delivery/report.md` |
 
 ## Troubleshooting
 
 - Login name is often the part before `@` in `EARTH_USER`
-- Fitness `score` must be finite and strictly positive (`max(f1, 1e-9)`)
+- Fitness `score` must be finite and strictly positive (`max(score, 1e-9)`)
 - Enum genes need `crossover: {type: error}`
-- Upload only `train.csv` to Earth — never `holdout.csv`
-- Do not model from the consolidated workbook
+- Upload only `train_clean.csv` and `test_ids.csv` to Earth — never `test_clean.csv`
+- `feature_mask` positions must match the `FEATURES` list in `earth/fitness.py`
 
 ## Workshop state management
 
-Full rules for humans and agents (teacher mode vs student mode):
+Branches, tags, and teacher vs student changes:
 [context/WORKSHOP_STATE_MANAGEMENT.md](context/WORKSHOP_STATE_MANAGEMENT.md).
-
-`workshop-1-start-v3` is the tree students receive. `workshop-1-solution-v3` is
-the verified pathway. Leave the solution tag facilitator-only until the workshop
-is over. Do not merge it into `main`.
-
-```bash
-# create the workshop starting point
-git tag -a workshop-1-start-v3 -m "Earth Workshop 1 student starting state"
-
-# continue implementing / testing the complete pathway
-git switch -c facilitator/solution workshop-1-start-v3
-# exploration → baseline → formulation → Earth packaging
-# → Earth run → champion validation → delivery
-
-# after successful end-to-end validation
-git tag -a workshop-1-solution-v3 -m "Earth Workshop 1 verified solution"
-
-# before class, repeat the student path from a clean tree
-git worktree add ../telco_churn_student workshop-1-start-v3
-```

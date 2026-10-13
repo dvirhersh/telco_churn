@@ -2,6 +2,8 @@
 
 **Source.** Based on the public IBM "Telco Customer Churn" sample dataset. This teaching copy was prepared by Evolution.inc for the Infinity Labs pre-training. It contains a few deliberate data problems for you to find.
 
+**These files.** `train_clean.csv` and `test_clean.csv` are the cleaned S1/S2 files; `test_ids.csv` holds only the `customerID` column of `test_clean.csv`.
+
 **What a row is.** One row per customer account, taken from a single snapshot of the customer base. The file has no dates.
 
 **The label.** `Churn`: whether the customer left within the month before the snapshot (`Yes` / `No`).
@@ -28,5 +30,5 @@
 | `PaymentMethod` | How the customer pays | Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic) |
 | `MonthlyCharges` | Current monthly charge | amount |
 | `TotalCharges` | Total amount charged to date | amount |
-| `LastContactReason` | Reason for the customer's most recent contact with the call centre | Cancellation request, Billing question, Technical issue, Plan change, No contact |
+| `LastContactReason` | Reason for the customer's most recent contact with the call centre *(removed in S1 cleaning: leak, not in these files)* | Cancellation request, Billing question, Technical issue, Plan change, No contact |
 | `Churn` | **Label.** Left within the month before the snapshot | Yes, No |

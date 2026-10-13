@@ -1,57 +1,52 @@
-# Project context — Workshop 1 churn classifier
+# Project context — S4 churn search through the Earth API
 
 ## Business frame
 
-A fictional telecom wants a model that flags customers at risk of leaving.
-The score is an input to a later retention process. This workshop stops at the
-flag. It does not design the retention offer, estimate uplift, or score
-profitability.
+A fictional telecom has a retention team that can make **400 calls a month**.
+The model ranks customers by churn risk; the team calls the top 400. This
+session stops at the ranked list. It does not design the retention offer,
+estimate uplift, or score profitability.
 
-## Workshop data assumption
+## Data assumption
 
-The IBM dataset is a cross-sectional teaching dataset rather than a true
-historical prediction snapshot. For Workshop 1, we treat selected demographic
-and service attributes as information available at the prediction point and
-`Churn Value` as the future binary outcome. Known outcome fields and suspicious
-target-adjacent fields are excluded. This assumption keeps the exercise focused
-on the DS-to-Earth pathway; a production churn project would require explicit
-event-time validation.
+The IBM dataset is a single snapshot with no dates. We treat the 19 feature
+columns as known at the time of the call list and `Churn` as the outcome to
+predict. A production churn project would need explicit event-time validation.
 
 ## Definitions
 
 | Item | Choice |
 |------|--------|
-| Unit of analysis | One customer (`Customer ID`) in this cross-section |
-| Prediction task | Binary classification under the workshop data assumption |
-| Positive class | `Churn Value == 1` |
-| Modeling source | Five-table module under `data/` (demographics, location, services, status). Population is optional. The consolidated `Telco_customer_churn.xlsx` is **not** the modeling source. |
-| Metric contract | Binary F1 for the positive class at threshold 0.5 (`zero_division=0`). F1 is selected because it combines precision and recall into one scalar suitable for GA fitness. No real business cost model is available in this exercise. Report precision, recall, and the confusion matrix beside F1. |
-| Split | Stratified 80/20 → `train.csv` and `holdout.csv`, `random_state=42`. Earth and the baseline cut `inner_train` / `validation` from `train.csv` only. `holdout.csv` is scored once at the end. Workshop 1 does not use the word *test* for a split. |
-| Success | Prefer the champion only when its holdout F1 is at least the baseline holdout F1. Reproducibility and an untouched holdout matter more than an external F1 target. |
+| Unit of analysis | One customer account (`customerID`) |
+| Label | `Churn == "Yes"` |
+| Modeling source | `data/train_clean.csv` (cleaned in S1/S2: duplicates removed, blank `TotalCharges` → 0, `LastContactReason` dropped as a leak) |
+| Metric | **hit@400**: share of the 400 highest-ranked customers who actually churn. With 5-fold stratified CV (seed 42), each validation fold gets 400 / 5 = 80 calls; the score is the mean hit rate over the folds. |
+| Why not F1 / AUC | Capacity is fixed, so the task is to rank and fill 400 slots. In S3, AUC tied the model families while hit@400 separated them. |
+| Reference numbers | On `train_clean.csv` (5,628 rows after dropping the 10 test-shared IDs): random list ≈ 0.27, logistic regression ≈ 0.76, gentle boosting ≈ 0.81 |
+| Split | Fixed in S1/S2. `train_clean.csv` for search and checks; `test_clean.csv` is the locked test set, scored once at the end. `test_ids.csv` (IDs only) is uploaded with train so the fitness drops the 10 customers who are also in test. |
+| Success | The champion beats the logistic-regression baseline on the same folds, still beats it on fresh fold seeds, and holds on the test set. |
 
-## Default feature boundary (facilitator recommendation)
+## Feature boundary
 
-Students confirm this before modeling.
+**Features (19, in `feature_mask` order):** `gender`, `SeniorCitizen`,
+`Partner`, `Dependents`, `tenure`, `PhoneService`, `MultipleLines`,
+`InternetService`, `OnlineSecurity`, `OnlineBackup`, `DeviceProtection`,
+`TechSupport`, `StreamingTV`, `StreamingMovies`, `Contract`,
+`PaperlessBilling`, `PaymentMethod`, `MonthlyCharges`, `TotalCharges`.
 
-**Exclude**
+**Never features:** `customerID` (identifier), `Churn` (label).
+`LastContactReason` was removed in S1 as a leak and is not in these files.
 
-- IDs / constants: `Customer ID`, `Count`, `Quarter`, `Country`, `State`
-- High-cardinality geography: `City`, `Zip Code`, `Lat Long`, `Latitude`, `Longitude`
-- Target aliases: `Churn Label`, `Churn Value`, `Customer Status`
-- Post-outcome: `Churn Category`, `Churn Reason`
-- Target-adjacent / model outputs: `Churn Score`, `CLTV`
-- `Satisfaction Score` — temporal availability is not established, and its near-deterministic relationship with the target makes it inappropriate for this workshop
-- Age restatements: `Under 30`, `Senior Citizen`
-- Duplicate / restating money fields for Workshop 1: `Referred a Friend`, `Total Revenue`, `Total Refunds`, `Total Extra Data Charges`, `Total Long Distance Charges`
+Earth may switch features off through `feature_mask`; it cannot add columns.
 
-**Include (default)**
+## What Earth may change
 
-- Demographics: `Gender`, `Age`, `Married`, `Dependents`, `Number of Dependents`
-- Services: `Tenure in Months`, `Number of Referrals`, `Offer`, `Phone Service`, `Avg Monthly Long Distance Charges`, `Multiple Lines`, `Internet Service`, `Internet Type`, `Avg Monthly GB Download`, `Online Security`, `Online Backup`, `Device Protection Plan`, `Premium Tech Support`, `Streaming TV`, `Streaming Movies`, `Streaming Music`, `Unlimited Data`, `Contract`, `Paperless Billing`, `Payment Method`, `Monthly Charge`, `Total Charges`
+Defined in `earth/chromosome.yaml`: the feature mask, encoding (one-hot /
+ordinal), scaler, class weight, model family (logistic regression / random
+forest / xgboost), and each family's hyperparameters. Fixed: the folds, seed,
+capacity (400), and the metric.
 
 ## Deliverable
 
-A short report with framing, baseline, formulation, Earth experiment ids,
-champion configuration, holdout metrics, a conclusion, and an answer to:
-“If you ran a second optimization experiment, what additional decision would
-you allow Earth to evolve?”
+A short report with framing, baseline, Earth experiment ids, champion
+configuration, hit@400 on search folds, fresh seeds and test, and a conclusion.

@@ -11,6 +11,8 @@ leaves the starter broken.
 | Starting state | `workshop-1-start-vN` (current: `workshop-1-start-v3`), branch `main` | What students clone and check out |
 | Solution | `workshop-1-solution-vN` (current: `workshop-1-solution-v3`), branch `facilitator/solution` | Verified pathway after Earth + holdout |
 
+Branch `s4` is the S4 session (from the Earth UI to the API); it has no tags yet.
+
 `main` stays on the start tag. The solution is **not** merged into `main`.
 Keep the solution tag facilitator-only until the workshop is over.
 
@@ -42,7 +44,7 @@ Typical teacher-mode work:
 - README, setup, prerequisites, checkout commands
 - `requirements.txt`, `.env.example`, `.gitignore`
 - `context/` (project context, pathway, this file, template reference)
-- `data/` and `data/data_context.md`
+- `data/` and `data/data_dictionary.md`
 - Earth **client** and readiness tools: `earth/earth_client.py`,
   `earth/check_connection.py`, `earth/validate_chromosome.py`, `earth/README.md`
 - Empty `work/` layout and the unfilled `work/framing.md` template
