@@ -35,8 +35,9 @@ session, headers = auth(password_only=True)
 
 Set `EARTH_USER` / `EARTH_PASS` in `.env` (login name often without `@domain`).
 Workshop scripts call `auth(password_only=True)` so a bad password exits instead
-of hanging on device code. Tokens are cached in `.earth_token_cache.json`
-(gitignored).
+of hanging on device code. Auth prefers the ZITADEL **access_token** (it carries
+`org_id` for `x-jwt-org-id`). Optional: set `EARTH_ORG_ID` explicitly. Tokens are
+cached in `.earth_token_cache.json` (gitignored).
 
 ## Reference only (do not run as the workshop)
 

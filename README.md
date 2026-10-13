@@ -27,7 +27,7 @@ earth/                  Earth REST client + connection check
 work/                   Your work (empty at start except framing.md)
 ```
 
-Start from tag `workshop-1-start-v1` (this tree). Do not check out the solution
+Start from tag `workshop-1-start-v2` (this tree). Do not check out the solution
 tag during the exercise.
 
 ## Prerequisites
@@ -160,22 +160,22 @@ implement code, run checks, and draft documentation. See
 
 ## Workshop state management
 
-`workshop-1-start-v1` is the tree students receive. `workshop-1-solution-v1` is
+`workshop-1-start-v2` is the tree students receive. `workshop-1-solution-v2` is
 the verified pathway. Leave the solution tag facilitator-only until the workshop
 is over. Do not merge it into `main`.
 
 ```bash
 # create the workshop starting point
-git tag -a workshop-1-start-v1 -m "Earth Workshop 1 student starting state"
+git tag -a workshop-1-start-v2 -m "Earth Workshop 1 student starting state"
 
 # continue implementing / testing the complete pathway
-git switch -c facilitator/solution workshop-1-start-v1
+git switch -c facilitator/solution workshop-1-start-v2
 # exploration → baseline → formulation → Earth packaging
 # → Earth run → champion validation → delivery
 
 # after successful end-to-end validation
-git tag -a workshop-1-solution-v1 -m "Earth Workshop 1 verified solution"
+git tag -a workshop-1-solution-v2 -m "Earth Workshop 1 verified solution"
 
 # before class, repeat the student path from a clean tree
-git worktree add ../telco_churn_student workshop-1-start-v1
+git worktree add ../telco_churn_student workshop-1-start-v2
 ```

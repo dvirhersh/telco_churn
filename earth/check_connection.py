@@ -27,6 +27,14 @@ def main() -> int:
         print(f"AUTH FAILED: {exc}", flush=True)
         return 1
 
+    if "x-jwt-org-id" not in headers:
+        print(
+            "AUTH FAILED: missing x-jwt-org-id. "
+            "Set EARTH_ORG_ID in .env or use an access token that includes org_id.",
+            flush=True,
+        )
+        return 1
+
     print(f"GET {BASE}/api/templates/{CHURN_TEMPLATE_ID}", flush=True)
     resp = session.get(
         f"{BASE}/api/templates/{CHURN_TEMPLATE_ID}",

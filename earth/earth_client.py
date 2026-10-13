@@ -50,7 +50,8 @@ BASIC_COMPUTE_PROFILE = {
 
 try:
     from dotenv import load_dotenv as _load_dotenv
-    _load_dotenv()
+    # Always load the repo-root .env, even when imported from earth/.
+    _load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 except ImportError:
     pass  # python-dotenv optional; os.environ already set in CI/prod
 
@@ -166,12 +167,14 @@ def _auth_password_api(session: requests.Session) -> str | None:
             )
             return None
         data = resp.json()
+        # Prefer access_token: ZITADEL access tokens carry org_id for x-jwt-org-id.
+        # id_token alone is not enough for org-scoped Earth API calls.
         token = (
-            data.get("id_token")
-            or data.get("access_token")
-            or data.get("token")
+            data.get("access_token")
             or (data.get("tokens") or {}).get("access_token")
+            or data.get("id_token")
             or (data.get("tokens") or {}).get("id_token")
+            or data.get("token")
         )
         if not token:
             print(f"Password login response missing token; keys={list(data)}", flush=True)
