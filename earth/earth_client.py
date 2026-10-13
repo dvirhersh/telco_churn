@@ -1,7 +1,7 @@
-"""Earth REST client for moxo clustering GA experiments.
+"""Earth REST client for the S4 telco churn search.
 
 Adapted from EARTH_AGENT_GUIDE.md.
-Usage: see earth/README.md or run as a script (example at the bottom).
+Usage: see earth/README.md; earth/run_search.py runs the full search.
 
 Set credentials in a .env file at the repo root:
     EARTH_USER=you@evolution.inc
@@ -471,8 +471,6 @@ def launch(
     project_id:   str,
     dataset_id:   str,
     chromo_path:  str   = "earth/chromosome.yaml",
-    fitness_path: str   = "earth/fitness.py",
-    config_path:  str   = "earth/moxo_config.py",
     code_files:   "list[str] | None" = None,
     pop:          int   = 30,
     units:        int   = 8,
@@ -494,12 +492,9 @@ def launch(
 
     Returns experiment_id.
 
-    By default (MOXO-compatible path) uploads ``fitness_path`` as ``fitness.py``
-    plus ``config_path`` as ``moxo_config.py``.
-
-    Pass ``code_files`` (list of local paths) to upload an arbitrary set of
-    sibling Python modules instead. Each file is uploaded under its basename
-    (e.g. ``demos/.../renderer.py`` → ``renderer.py``). The first file whose
+    ``code_files`` (list of local paths, default ``["earth/fitness.py"]``) is the
+    set of sibling Python modules to upload. Each file is uploaded under its basename
+    (e.g. ``earth/fitness.py`` → ``fitness.py``). The first file whose
     basename is ``fitness.py`` (or the first file if none match) is treated as
     the fitness entry module by Earth convention; callers should include a
     ``fitness.py``.
@@ -507,21 +502,32 @@ def launch(
     chromo_yaml = open(chromo_path).read()
 
     if code_files is None:
-        fitness_payload = [
-            {"key": "fitness.py", "value": open(fitness_path).read(), "is_folder": False},
-            {"key": "moxo_config.py", "value": open(config_path).read(), "is_folder": False},
-        ]
-    else:
-        fitness_payload = []
-        for path in code_files:
-            p = Path(path)
-            fitness_payload.append({
-                "key": p.name,
-                "value": p.read_text(encoding="utf-8"),
-                "is_folder": False,
-            })
-        if not fitness_payload:
-            raise ValueError("code_files must contain at least one Python module")
+        code_files = ["earth/fitness.py"]
+    fitness_payload = []
+    for path in code_files:
+        p = Path(path)
+        fitness_payload.append({
+            "key": p.name,
+            "value": p.read_text(encoding="utf-8"),
+            "is_folder": False,
+        })
+    if not fitness_payload:
+        raise ValueError("code_files must contain at least one Python module")
+
+    intended = _ga_config(
+        pop, minutes, maximize,
+        elite_pct=elite_pct,
+        mutation_pct=mutation_pct,
+        unique_mutation_pct=unique_mutation_pct,
+        recalculate_elite=recalculate_elite,
+        max_stagnation_loops=max_stagnation_loops,
+        max_drifts=max_drifts,
+        steady_threshold=steady_threshold,
+        generation_start_steady=generation_start_steady,
+        look_back=look_back,
+        generate_final_mutations=generate_final_mutations,
+        enable_genetic_drift=enable_genetic_drift,
+    )
 
     patch = {
         "chromosome": {"value": chromo_yaml},
@@ -529,20 +535,7 @@ def launch(
             "code": fitness_payload,
             "requirements": [],
         },
-        "configuration": _ga_config(
-            pop, minutes, maximize,
-            elite_pct=elite_pct,
-            mutation_pct=mutation_pct,
-            unique_mutation_pct=unique_mutation_pct,
-            recalculate_elite=recalculate_elite,
-            max_stagnation_loops=max_stagnation_loops,
-            max_drifts=max_drifts,
-            steady_threshold=steady_threshold,
-            generation_start_steady=generation_start_steady,
-            look_back=look_back,
-            generate_final_mutations=generate_final_mutations,
-            enable_genetic_drift=enable_genetic_drift,
-        ),
+        "configuration": intended,
         "dataset_id": dataset_id,
     }
     r = session.patch(
@@ -562,20 +555,6 @@ def launch(
 
     # Replace template configuration entirely. Merging ai1.ga into the clone
     # left genetic-drift operators active and did not cap live population.
-    intended = _ga_config(
-        pop, minutes, maximize,
-        elite_pct=elite_pct,
-        mutation_pct=mutation_pct,
-        unique_mutation_pct=unique_mutation_pct,
-        recalculate_elite=recalculate_elite,
-        max_stagnation_loops=max_stagnation_loops,
-        max_drifts=max_drifts,
-        steady_threshold=steady_threshold,
-        generation_start_steady=generation_start_steady,
-        look_back=look_back,
-        generate_final_mutations=generate_final_mutations,
-        enable_genetic_drift=enable_genetic_drift,
-    )
     cfg = deepcopy(intended)
 
     code_files = [
@@ -589,7 +568,7 @@ def launch(
     fu["total_memory"]         = f"{(units + 1) * 8 + 2}.00Gi"
 
     body = {
-        "name":       proj.get("title", "moxo-ga"),
+        "name":       proj.get("title", "telco-churn-ga"),
         "project_id": project_id,
         "shared":     False,
         "configuration": {
@@ -875,48 +854,3 @@ def poll(session: requests.Session, headers: dict, exp_id: str) -> dict:
 def abort(session: requests.Session, headers: dict, exp_id: str) -> None:
     session.post(f"{BASE}/api/experiments/{exp_id}/abort", headers=headers)
     print(f"Aborted experiment {exp_id}")
-
-
-# ── Example script ─────────────────────────────────────────────────────────────
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Launch a moxo Earth GA experiment")
-    parser.add_argument("--csv",     required=True, help="Path to the training CSV")
-    parser.add_argument("--name",    default="moxo-clustering-ga", help="Dataset / project name")
-    parser.add_argument("--pop",     type=int, default=30,  help="GA population size")
-    parser.add_argument("--units",   type=int, default=8,   help="Fitness units (parallel workers)")
-    parser.add_argument("--minutes", type=int, default=60,  help="Wall-clock budget in minutes")
-    parser.add_argument("--out",     default="winning_chromosome.json", help="Output file for best chromosome")
-    args = parser.parse_args()
-
-    session, headers = auth()
-
-    dataset_id = upload_dataset(session, headers, args.csv, args.name)
-    project_id = clone_template(session, headers, CHURN_TEMPLATE_ID, dataset_id, args.name)
-
-    exp_id = launch(session, headers, project_id, dataset_id,
-                    chromo_path="earth/chromosome.yaml",
-                    fitness_path="earth/fitness.py",
-                    config_path="earth/moxo_config.py",
-                    pop=args.pop, units=args.units, minutes=args.minutes)
-
-    prev_score = None
-    while True:
-        time.sleep(180)
-        state = poll(session, headers, exp_id)
-        print(f"  [{state['status']}] gen={state['generation']}  score={state['score']}")
-        if state["status"] in ("COMPLETED", "STAGNATED", "ERROR"):
-            break
-        if prev_score is not None and state["score"] is not None:
-            if abs(state["score"] - prev_score) < 0.001:
-                abort(session, headers, exp_id)
-                break
-        prev_score = state["score"]
-
-    final = poll(session, headers, exp_id)
-    Path(args.out).write_text(json.dumps(final["chromosome"], indent=2))
-    print(f"\nBest score: {final['score']}")
-    print(f"Scalars:    {json.dumps(final['scalars'], indent=2)}")
-    print(f"Chromosome saved to {args.out}")

@@ -216,10 +216,9 @@ equivalent and went directly from data prep to baseline modeling. This closes th
     candidate naturally exists): construct a domain/EDA-informed starting configuration
     for the system being optimized — e.g. a hand-derived seed chromosome, or a small set
     of literature/EDA-driven preset configurations. This is a validated, independently
-    convergent pattern, not a one-off: baranes-nv's `eda_to_chromosome.py` (EDA → seed
-    chromosome) and moxo-clustering-optimization's Step 2 "Candidate Discovery" (preset
-    clustering configs run before GA) are the same move in different domains, found in
-    project review.
+    convergent pattern, not a one-off: an EDA → seed-chromosome script and a set of
+    preset clustering configs run before GA are the same move in different domains,
+    found in project review.
 - **Required Output:** Baseline report and artifacts. Simple-model form: key metrics,
   confusion matrix, ROC/PR, feature importance. Seed-configuration form: the seed
   config itself, plus its evaluated score under the metric/fitness contract.
@@ -471,6 +470,6 @@ plan so drafting isn't blocked, but none are final:
 |---|---|---|
 | 0.1 | Initial draft — Tier 2 Practices instantiated from `ASSIGNMENT_OBJECTIVE_SCOPE_PLAN.md` | Work Package 2 |
 | 0.2 | Data Foundation: added a governed "Split Revision" exception to the immutable-holdout rule, distinct from re-splitting over a disappointing result | Project review — baranes-nv (confirmed real re-splits driven by new understanding of the data) |
-| 0.2 | Baseline Evidence: added the seed-configuration form as a valid baseline for GA-first systems, alongside the simple-model form, with the independence-from-search invariant | Project review — baranes-nv (`eda_to_chromosome.py`) and moxo-clustering-optimization (Step 2 "Candidate Discovery") |
-| 0.3 | Added `CLUSTERING_EDA_AND_METHODOLOGY.md` (initial framing) and linked it from Success Criteria, Data Foundation, Solution Design, Baseline Evidence, and Optimization Formulation | Project review — moxo-clustering-optimization |
+| 0.2 | Baseline Evidence: added the seed-configuration form as a valid baseline for GA-first systems, alongside the simple-model form, with the independence-from-search invariant | Project review (two GA-first projects) |
+| 0.3 | Added `CLUSTERING_EDA_AND_METHODOLOGY.md` (initial framing) and linked it from Success Criteria, Data Foundation, Solution Design, Baseline Evidence, and Optimization Formulation | Project review (clustering project) |
 | 0.4 | Added Practice 12 — Project Retrospective (Deliver phase, no paired Gate), formalizing post-delivery insight extraction and v4.0's undefined "project closure" | Teamlead conversation |

@@ -154,7 +154,6 @@ implement code, run checks, and draft documentation. See
 - Enum genes need `crossover: {type: error}`
 - Upload only `train.csv` to Earth — never `holdout.csv`
 - Do not model from the consolidated workbook
-- Do not run `python earth/earth_client.py` (legacy MOXO `__main__`)
 
 ## Workshop state management
 
