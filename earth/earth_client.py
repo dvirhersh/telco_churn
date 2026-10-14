@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -23,10 +22,6 @@ import yaml
 # ── Constants ──────────────────────────────────────────────────────────────────
 
 BASE = "https://earth.evolution.inc"
-# Legacy Keycloak path is obsolete (SPA catch-all). Prefer /api/auth/login, then
-# ZITADEL OIDC device code via /.well-known/openid-configuration.
-OIDC_CLIENT_ID = "386815233072662251"
-OIDC_SCOPES = "openid profile email offline_access"
 TOKEN_CACHE_PATH = Path(__file__).resolve().parent.parent / ".earth_token_cache.json"
 
 # Clone any existing valid project to inherit a well-formed GA configuration.
@@ -56,25 +51,7 @@ except ImportError:
     pass  # python-dotenv optional; os.environ already set in CI/prod
 
 
-def _env(key: str) -> str:
-    """Read a required credential from environment. Fail fast if missing."""
-    value = os.environ.get(key)
-    if value:
-        return value
-    sys.exit(
-        f"Missing credential '{key}'. "
-        "Copy .env.example to .env and set the value, "
-        "or export as an environment variable."
-    )
-
-
 # ── Auth ───────────────────────────────────────────────────────────────────────
-
-def _oidc_metadata() -> dict:
-    resp = requests.get(f"{BASE}/.well-known/openid-configuration", timeout=30)
-    resp.raise_for_status()
-    return resp.json()
-
 
 def _org_id_from_token(token: str) -> str | None:
     """Extract Earth org id from JWT claims when present."""
@@ -191,74 +168,15 @@ def _auth_password_api(session: requests.Session) -> str | None:
     return None
 
 
-def _auth_device_code(session: requests.Session) -> str:
-    """ZITADEL OIDC device authorization flow (interactive once per cache lifetime)."""
-    meta = _oidc_metadata()
-    device_url = meta["device_authorization_endpoint"]
-    token_url = meta["token_endpoint"]
-    start = session.post(
-        device_url,
-        data={"client_id": OIDC_CLIENT_ID, "scope": OIDC_SCOPES},
-        timeout=60,
-    )
-    if not start.ok:
-        raise RuntimeError(
-            f"Device authorization failed: HTTP {start.status_code} {start.text[:300]!r}"
-        )
-    payload = start.json()
-    print(
-        "\nEarth login required (OIDC device code).\n"
-        f"  1. Open: {payload.get('verification_uri_complete') or payload.get('verification_uri')}\n"
-        f"  2. Confirm code: {payload.get('user_code')}\n"
-        "Waiting for authorization...\n",
-        flush=True,
-    )
-    interval = max(int(payload.get("interval") or 5), 2)
-    deadline = time.time() + int(payload.get("expires_in") or 300)
-    device_code = payload["device_code"]
-    while time.time() < deadline:
-        time.sleep(interval)
-        tok = session.post(
-            token_url,
-            data={
-                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                "device_code": device_code,
-                "client_id": OIDC_CLIENT_ID,
-            },
-            timeout=60,
-        )
-        if tok.status_code == 200:
-            data = tok.json()
-            token = data.get("access_token") or data.get("id_token")
-            if not token:
-                raise RuntimeError(f"Device token response missing token; keys={list(data)}")
-            _save_token_cache(data)
-            print("Device authorization successful.", flush=True)
-            return token
-        try:
-            err = tok.json()
-        except ValueError:
-            err = {"error": tok.text[:200]}
-        error = err.get("error")
-        if error in ("authorization_pending", "slow_down"):
-            if error == "slow_down":
-                interval += 2
-            continue
-        raise RuntimeError(f"Device token error: {err}")
-    raise RuntimeError("Device authorization timed out")
-
-
 def auth(*, password_only: bool = False) -> tuple[requests.Session, dict]:
     """Authenticate and return (session, headers).
 
     Order:
       1. Cached access token (``.earth_token_cache.json``)
       2. ``POST /api/auth/login`` with ``EARTH_USER`` / ``EARTH_PASS``
-      3. OIDC device-code flow (ZITADEL) using the Earth web client id
 
-    When ``password_only`` is True, step 3 is skipped. Missing or rejected
-    credentials raise ``RuntimeError`` instead of opening device authorization.
-    Workshop scripts should pass ``password_only=True``.
+    Missing or rejected credentials raise ``RuntimeError``. ``password_only`` is
+    kept for compatibility; password login is the only flow.
     """
     session = requests.Session()
     cached = _load_cached_token()
@@ -269,51 +187,10 @@ def auth(*, password_only: bool = False) -> tuple[requests.Session, dict]:
     if token:
         return session, _headers_from_token(token)
 
-    if password_only:
-        raise RuntimeError(
-            "Password login failed or EARTH_USER / EARTH_PASS are missing. "
-            "Device-code fallback is disabled (password_only=True). "
-            "Fix credentials in .env and retry."
-        )
-
-    token = _auth_device_code(session)
-    return session, _headers_from_token(token)
-
-
-# ── Dataset lookup ─────────────────────────────────────────────────────────────
-
-def find_dataset_by_id(session: requests.Session, headers: dict, dataset_id: str) -> bool:
-    """Return True if *dataset_id* still exists in the organisation's dataset list.
-
-    First tries a direct ``GET /api/datasets/<id>`` (fast O(1) lookup). If the
-    server returns 404 that dataset is gone. For any other non-200 status the
-    function falls back to ``GET /api/datasets/by-organization`` and scans the
-    list — this handles servers where the direct endpoint is not supported.
-    """
-    # Fast path: direct lookup
-    try:
-        resp = session.get(f"{BASE}/api/datasets/{dataset_id}", headers=headers, timeout=30)
-        if resp.status_code == 200:
-            return True
-        if resp.status_code == 404:
-            return False
-    except Exception:
-        pass  # network glitch → fall through to list lookup
-
-    # Fallback: list all organisation datasets and scan
-    try:
-        resp = session.get(f"{BASE}/api/datasets/by-organization", headers=headers, timeout=60)
-        if not resp.ok:
-            return False
-        datasets = resp.json()
-        if isinstance(datasets, list):
-            return any(
-                str(ds.get("id") or ds.get("_id") or ds.get("dataset_id", "")) == str(dataset_id)
-                for ds in datasets
-            )
-    except Exception:
-        pass
-    return False
+    raise RuntimeError(
+        "Password login failed or EARTH_USER / EARTH_PASS are missing. "
+        "Fix credentials in .env and retry."
+    )
 
 
 # ── Dataset upload ─────────────────────────────────────────────────────────────
@@ -645,129 +522,6 @@ def _find_experiment_for_project(
         return str(eid) if eid else None
     except Exception:
         return None
-
-
-def extract_earth_ga_envelope(exp: dict, project: dict | None = None) -> dict:
-    """Read live Earth GA envelope from the experiment, then project as fallback."""
-    cfg = (exp or {}).get("configuration") or {}
-    lom = cfg.get("lom_configuration") or cfg.get("configuration") or cfg
-    if (not isinstance(lom, dict) or lom.get("ai1") is None) and project:
-        pcfg = project.get("configuration") or {}
-        if isinstance(pcfg, dict) and pcfg.get("ai1"):
-            lom = pcfg
-    ga = ((lom.get("ai1") or {}).get("ga") or {})
-    fu = cfg.get("fitness_unit") or {}
-    flow = ((lom.get("ai1") or {}).get("flow_control") or {})
-    drift = (lom.get("ai1") or {}).get("cumulative_genetic_drift") or {}
-    pop = ga.get("population_size")
-    if pop is None:
-        pop = exp.get("population_size")
-    return {
-        "population_size": pop,
-        "elite_percentage": ga.get("elite_percentage"),
-        "mutation_percentage": ga.get("mutation_percentage"),
-        "fitness_units": fu.get("fitness_units_amount"),
-        "experiment_population_size_field": exp.get("population_size"),
-        "chosen_drifts_names": drift.get("chosen_drifts_names"),
-        "ga": ga,
-        "flow_control": flow,
-        "fitness_unit": fu,
-        "cumulative_genetic_drift": drift,
-    }
-
-
-def expected_ga_envelope(earth_cfg: dict) -> dict:
-    expected = {
-        "population_size": int(earth_cfg.get("population_size", 12)),
-        "fitness_units": int(earth_cfg.get("fitness_units", 4)),
-        "elite_percentage": float(earth_cfg.get("elite_percentage", 0.15)),
-        "mutation_percentage": float(earth_cfg.get("mutation_percentage", 0.60)),
-    }
-    if earth_cfg.get("disable_genetic_drift"):
-        expected["chosen_drifts_names"] = []
-    return expected
-
-
-def ga_envelope_mismatches(actual: dict, expected: dict, *, abs_tol: float = 1e-6) -> list[str]:
-    """Return human-readable mismatches; empty means envelope matches."""
-    issues: list[str] = []
-    for key in ("population_size", "fitness_units"):
-        a, e = actual.get(key), expected.get(key)
-        if a is None or int(a) != int(e):
-            issues.append(f"{key}: earth={a!r} expected={e!r}")
-    for key in ("elite_percentage", "mutation_percentage"):
-        a, e = actual.get(key), expected.get(key)
-        if a is None or abs(float(a) - float(e)) > abs_tol:
-            issues.append(f"{key}: earth={a!r} expected={e!r}")
-    # Top-level experiment.population_size must agree with GA config.
-    raw = actual.get("experiment_population_size_field")
-    want = expected.get("population_size")
-    if raw is not None and want is not None and int(raw) != int(want):
-        issues.append(
-            f"experiment.population_size: earth={raw!r} expected={want!r}"
-        )
-    if "chosen_drifts_names" in expected:
-        a = list(actual.get("chosen_drifts_names") or [])
-        e = list(expected.get("chosen_drifts_names") or [])
-        if a != e:
-            issues.append(f"chosen_drifts_names: earth={a!r} expected={e!r}")
-    return issues
-
-
-def next_generation_population(
-    population: int, elite_percentage: float, mutation_percentage: float
-) -> int:
-    """Earth next-generation headcount: elites kept + mutants requested.
-
-    Empirically *not* truncated to ``population_size``. ``elite=0.5`` and
-    ``mutation=1.0`` yields 1.5× per generation (2 → 947 at gen 15).
-    ``elite=0.5`` and ``mutation=0.5`` yields 1+1=2 (fixed (1+1) envelope).
-    ``elite=0`` yields 0 elites and Earth stops producing generations.
-    """
-    p = int(population)
-    return int(round(float(elite_percentage) * p)) + int(
-        round(float(mutation_percentage) * p)
-    )
-
-
-def plus_elite_live_population(initial: int, elite_percentage: float, generation: int) -> int:
-    """Live size after ``generation`` steps of elite-only add (mutation=1.0).
-
-    Same recurrence as ``next_generation_population(p, elite, 1.0)``.
-    """
-    p = int(initial)
-    for _ in range(max(0, int(generation))):
-        p = next_generation_population(p, elite_percentage, 1.0)
-    return p
-
-
-def eval_count_implies_population_growth(
-    *,
-    eval_count: float | int | None,
-    generation: int | None,
-    population_size: int,
-    max_evals_per_generation_per_worker: float,
-) -> str | None:
-    """Return an issue if per-worker eval_count cannot fit a fixed population."""
-    if eval_count is None or generation is None:
-        return None
-    try:
-        count = float(eval_count)
-        gen = int(generation)
-        pop = int(population_size)
-        cap_per_gen = float(max_evals_per_generation_per_worker)
-    except (TypeError, ValueError):
-        return None
-    if count != count or gen < 0 or pop <= 0 or cap_per_gen <= 0:
-        return None
-    denom = max(1, gen)
-    implied = count / denom
-    if implied > cap_per_gen:
-        return (
-            f"eval_count={count:g} at gen={gen} implies {implied:.1f} evals/gen "
-            f"on one worker; cap is {cap_per_gen:g} for population_size={pop}"
-        )
-    return None
 
 
 # ── Poll / abort ───────────────────────────────────────────────────────────────

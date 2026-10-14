@@ -27,18 +27,16 @@ Prompts for the agent: [AGENT_PROMPTS.md](AGENT_PROMPTS.md).
 ## Repository
 
 ```text
-data/            train_clean.csv, test_clean.csv, test_ids.csv, data_dictionary.md
+data/            train_clean.csv, test_ids.csv, data_dictionary.md
 earth/           chromosome.yaml + fitness.py (from the UI run), run_search.py,
                  check_local.py, compare_runs.py, WALKTHROUGH.md, Earth client
-context/         Project context, pathway, DS practices
-work/runs/       One folder per run (created by run_search.py)
+work/            run_notes.md; runs/ holds one folder per run (created by run_search.py)
 ```
 
 | Data file | Role |
 |-----------|------|
 | `data/train_clean.csv` | Uploaded to Earth; the search runs on it |
-| `data/test_ids.csv` | Customer IDs only; uploaded so the fitness drops the 10 customers also in test |
-| `data/test_clean.csv` | Locked test set with labels. **Never uploaded.** Used once, in the homework |
+| `data/test_ids.csv` | IDs of the customers in the course's locked test set; uploaded so the fitness drops the 10 of them that also appear in train |
 
 Column meanings: [data/data_dictionary.md](data/data_dictionary.md).
 
@@ -47,7 +45,7 @@ Column meanings: [data/data_dictionary.md](data/data_dictionary.md).
 You need Python 3.12 and your Earth login.
 
 ```bash
-git clone --branch s4 --single-branch https://github.com/vasiliyk-gif/telco_churn.git
+git clone --branch s4-class-v1 --single-branch https://github.com/vasiliyk-gif/telco_churn.git
 cd telco_churn
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -76,7 +74,7 @@ It checks the chromosome and fitness locally, uploads `train_clean.csv` +
 `test_ids.csv`, launches on Earth, and polls until the run stops (time cap 15
 minutes). It prints the experiment name; watch the generations in the Earth UI.
 
-Results land in `work/runs/run1/`:
+Results land in `work/runs/run1/` (add a line to `work/run_notes.md`):
 
 - `earth_ids.json` — Earth ids and settings. Check `"test_ids_uploaded": true`.
 - `champion_chromosome.json` — the best chromosome and its hit@400 per fold.
@@ -106,7 +104,8 @@ cp earth/chromosome.yaml work/runs/run2/chromosome.yaml
 ```
 
 Change **one** thing in `work/runs/run2/chromosome.yaml` (ideas in the
-walkthrough), write down why, then check and run:
+walkthrough), write the change and your prediction in `work/run_notes.md`,
+then check and run:
 
 ```bash
 python earth/check_local.py --chromosome work/runs/run2/chromosome.yaml
@@ -137,9 +136,8 @@ fitness.
 
 ## Next: homework
 
-The homework moves to the extended dataset and the full pathway: framing, a
-baseline, then search, a re-check on fresh fold seeds, and one score on the test
-set. Details will follow.
+The homework moves to a new dataset and the full cycle: framing, baseline,
+search, a check on fresh folds, and one test read. Details will follow.
 
 ## Working with your coding agent
 
@@ -155,5 +153,5 @@ code, run commands, and draft edits for you to review.
   size that no longer matches the `FEATURES` list in `fitness.py`.
 - `already exists. Pick a new --name`: each run needs its own name.
 - Enum genes need `crossover: {type: error}`.
-- Upload only `train_clean.csv` and `test_ids.csv` — never `test_clean.csv`.
+- Upload only `train_clean.csv` and `test_ids.csv`.
 - Validate a chromosome on Earth: `python earth/validate_chromosome.py <path>`.

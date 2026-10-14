@@ -2,7 +2,7 @@
 
 **Source.** Based on the public IBM "Telco Customer Churn" sample dataset. This teaching copy was prepared by Evolution.inc for the Infinity Labs pre-training. It contains a few deliberate data problems for you to find.
 
-**These files.** `train_clean.csv` and `test_clean.csv` are the cleaned S1/S2 files; `test_ids.csv` holds only the `customerID` column of `test_clean.csv`.
+**These files.** `train_clean.csv` is the cleaned S1/S2 training file. `test_ids.csv` holds only the `customerID` column of the course's locked test set; the test labels are not in this repo.
 
 **What a row is.** One row per customer account, taken from a single snapshot of the customer base. The file has no dates.
 

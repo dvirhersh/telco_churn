@@ -10,7 +10,7 @@ Run from repo root (requires .env with EARTH_USER / EARTH_PASS):
 
 Steps: local pre-check of the chromosome + fitness, upload data/train_clean.csv +
 data/test_ids.csv, clone the template project, launch, poll until Earth stops,
-save the champion. test_clean.csv carries labels and is never uploaded.
+save the champion.
 
 GA settings come from the ai1 block of the chromosome YAML, except population
 (--pop), time cap (--minutes), and compute (--units, --cpus), which are sized for

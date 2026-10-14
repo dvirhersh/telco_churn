@@ -1,8 +1,8 @@
 # Earth integration (this repository)
 
-Reusable Earth REST client and contracts for Workshop 1.
+Earth REST client, search files, and run tools for the S4 session.
 
-## Workshop use
+## Session use
 
 ```bash
 python earth/check_connection.py                     # login check, no experiment
@@ -13,8 +13,7 @@ python earth/validate_chromosome.py earth/chromosome.yaml   # Earth's own schema
 ```
 
 `run_search.py` uploads `data/train_clean.csv` plus `data/test_ids.csv` (so the
-fitness drops the 10 customers shared with the test set). `data/test_clean.csv`
-carries labels and is never uploaded. Options: `--chromosome`, `--fitness`,
+fitness drops the 10 customers shared with the course's test set). Options: `--chromosome`, `--fitness`,
 `--pop` (10), `--units` (5), `--cpus` (1), `--minutes` (15), `--no-wait`,
 `--collect`. Other GA settings come from the YAML's `ai1` block.
 
@@ -37,12 +36,11 @@ session, headers = auth(password_only=True)
 | `earth_client.py` | Auth, dataset upload, launch, poll, abort |
 | `check_connection.py` | Password-only auth + template + running-count |
 | `validate_chromosome.py` | `POST /api/evl/chromosome/validate` + negative control |
-| `context/` | Earth GA contracts (see `NOTES_FOR_THIS_REPO.md`) |
+| `context/` | Earth GA contract references for you and your agent (see `NOTES_FOR_THIS_REPO.md`) |
 
 ## Auth
 
 Set `EARTH_USER` / `EARTH_PASS` in `.env` (login name often without `@domain`).
-Workshop scripts call `auth(password_only=True)` so a bad password exits instead
-of hanging on device code. Auth prefers the ZITADEL **access_token** (it carries
-`org_id` for `x-jwt-org-id`). Optional: set `EARTH_ORG_ID` explicitly. Tokens are
+Scripts log in with `POST /api/auth/login` and use the ZITADEL **access_token**
+(it carries `org_id` for `x-jwt-org-id`); a bad password exits with a clear message. Optional: set `EARTH_ORG_ID` explicitly. Tokens are
 cached in `.earth_token_cache.json` (gitignored).
