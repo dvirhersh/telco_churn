@@ -1,5 +1,7 @@
 # Earth DS Workshop — Churn Prediction (S4: from the Earth UI to the API)
 
+> **Before class:** do [Step 0](#step-0--set-up) (venv, `pip install -r requirements.txt`, `.env` with your Earth login) so class starts at Step 1.
+
 ## The session
 
 You ran a churn search in the Earth UI. Today you run the same search from your
