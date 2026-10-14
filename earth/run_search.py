@@ -1,23 +1,38 @@
-"""Upload train_clean.csv (+ test_ids.csv), launch the S4 Earth GA run, save the champion.
+"""Run one Earth GA search from the terminal and save it under work/runs/<name>/.
 
-Run from repo root (requires .env):
-    python earth/run_search.py
+Run from repo root (requires .env with EARTH_USER / EARTH_PASS):
 
-GA settings match the Earth UI run (ai1 block of earth/chromosome.yaml). The run
-stops on Earth's own stagnation rules; there is no teaching-budget abort.
-test_clean.csv carries labels and is never uploaded.
+    python earth/run_search.py                       # run1: the UI chromosome + fitness as is
+    python earth/run_search.py --name run2 --chromosome work/runs/run2/chromosome.yaml
+    python earth/run_search.py --name run3 --fitness work/runs/run3/fitness.py
+    python earth/run_search.py --name run1 --no-wait  # launch and exit
+    python earth/run_search.py --name run1 --collect  # later: poll and save the champion
+
+Steps: local pre-check of the chromosome + fitness, upload data/train_clean.csv +
+data/test_ids.csv, clone the template project, launch, poll until Earth stops,
+save the champion. test_clean.csv carries labels and is never uploaded.
+
+GA settings come from the ai1 block of the chromosome YAML, except population
+(--pop), time cap (--minutes), and compute (--units, --cpus), which are sized for
+a class of students running at the same time.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
+import os
+import shutil
 import sys
 import time
 from pathlib import Path
 
+import yaml
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from check_local import check as check_local  # noqa: E402
 from earth_client import (  # noqa: E402
     BASE,
     CHURN_TEMPLATE_ID,
@@ -30,10 +45,66 @@ from earth_client import (  # noqa: E402
 
 TRAIN_CSV = _REPO_ROOT / "data" / "train_clean.csv"
 TEST_IDS_CSV = _REPO_ROOT / "data" / "test_ids.csv"
-CHROMOSOME = _REPO_ROOT / "earth" / "chromosome.yaml"
-FITNESS_PY = _REPO_ROOT / "earth" / "fitness.py"
-OUT_DIR = _REPO_ROOT / "work" / "optimization"
+RUNS_DIR = _REPO_ROOT / "work" / "runs"
 POLL_SECONDS = 30
+FINAL_STATUSES = ("COMPLETED", "STAGNATED", "ERROR", "ABORTED")
+PLACEHOLDERS = {"", "your_login_name", "your_password"}
+
+
+def check_credentials() -> bool:
+    """Plain-language check of .env before any Earth call."""
+    env_path = _REPO_ROOT / ".env"
+    if not env_path.is_file() and not os.environ.get("EARTH_USER"):
+        print(
+            "No .env file. Run:  cp .env.example .env  and put your Earth user "
+            "and password in it.",
+            flush=True,
+        )
+        return False
+    user = (os.environ.get("EARTH_USER") or "").strip()
+    password = (os.environ.get("EARTH_PASS") or "").strip()
+    if user in PLACEHOLDERS or password in PLACEHOLDERS:
+        print(
+            "Put your Earth user and password in .env (EARTH_USER / EARTH_PASS); "
+            "it still has the example values.",
+            flush=True,
+        )
+        return False
+    return True
+
+
+def ga_settings(chromosome_yaml: Path, args: argparse.Namespace) -> dict:
+    """launch() keyword arguments: ai1 block of the YAML + class-sized overrides."""
+    doc = yaml.safe_load(chromosome_yaml.read_text(encoding="utf-8")) or {}
+    ai1 = doc.get("ai1") or {}
+    ga = ai1.get("ga") or {}
+    flow = ai1.get("flow_control") or {}
+    drifts = (ai1.get("cumulative_genetic_drift") or {}).get("chosen_drifts_names")
+    yaml_pop = ga.get("population_size")
+    if yaml_pop is not None and int(yaml_pop) != args.pop:
+        print(
+            f"Note: population_size is {args.pop} (from --pop); the YAML says {yaml_pop}.",
+            flush=True,
+        )
+    return {
+        "pop": args.pop,
+        "units": args.units,
+        "fitness_cpus": args.cpus,
+        "concurrency": args.units,
+        "minutes": args.minutes,
+        "maximize": bool(ai1.get("is_maximum_problem", True)),
+        "elite_pct": float(ga.get("elite_percentage", 0.05)),
+        "mutation_pct": float(ga.get("mutation_percentage", 0.15)),
+        "unique_mutation_pct": ga.get("unique_mutation_percentage", 0),
+        "recalculate_elite": bool(ga.get("recalculate_elite_fitness", False)),
+        "max_stagnation_loops": int(flow.get("max_stagnation_loops", 5)),
+        "max_drifts": int(flow.get("max_drifts_with_no_change", 3)),
+        "steady_threshold": float(flow.get("steady_threshold", 0.001)),
+        "generation_start_steady": int(flow.get("generation_to_start_check_steady_state", 10)),
+        "look_back": int(flow.get("how_many_generations_look_back", 11)),
+        "generate_final_mutations": bool(ai1.get("generate_final_mutations", False)),
+        "enable_genetic_drift": bool(drifts) if drifts is not None else True,
+    }
 
 
 def upload_extra_asset(session, headers, dataset_id: str, csv_path: Path) -> bool:
@@ -60,79 +131,24 @@ def upload_extra_asset(session, headers, dataset_id: str, csv_path: Path) -> boo
     return True
 
 
-def main() -> int:
-    for path in (TRAIN_CSV, TEST_IDS_CSV, CHROMOSOME, FITNESS_PY):
-        if not path.is_file():
-            print(f"Missing {path}", flush=True)
-            return 1
+def copy_into(src: Path, run_dir: Path) -> None:
+    dst = run_dir / src.name
+    if dst.exists() and dst.resolve() == src.resolve():
+        return
+    shutil.copy(src, dst)
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Authenticating (password_only=True)...", flush=True)
-    session, headers = auth(password_only=True)
-
-    name = f"s4-telco-churn-{int(time.time())}"
-    print(f"Uploading {TRAIN_CSV} as dataset '{name}'...", flush=True)
-    dataset_id = upload_dataset(session, headers, str(TRAIN_CSV), name)
-
-    print(f"Uploading {TEST_IDS_CSV} to the same dataset...", flush=True)
-    test_ids_uploaded = upload_extra_asset(session, headers, dataset_id, TEST_IDS_CSV)
-    if not test_ids_uploaded:
-        print(
-            "Continuing without test_ids.csv: fitness keeps the 10 customers "
-            "shared with the test set.",
-            flush=True,
-        )
-
-    print("Cloning template / creating project...", flush=True)
-    project_id = clone_template(
-        session, headers, CHURN_TEMPLATE_ID, dataset_id, name
-    )
-
-    print("Launching experiment...", flush=True)
-    exp_id = launch(
-        session,
-        headers,
-        project_id,
-        dataset_id,
-        chromo_path=str(CHROMOSOME),
-        code_files=[str(FITNESS_PY)],
-        pop=20,
-        elite_pct=0.05,
-        mutation_pct=0.15,
-        minutes=None,
-        maximize=True,
-        max_stagnation_loops=5,
-        max_drifts=3,
-        steady_threshold=0.001,
-        generation_start_steady=10,
-        look_back=11,
-        enable_genetic_drift=True,
-    )
-
-    ids = {
-        "dataset_id": dataset_id,
-        "project_id": project_id,
-        "experiment_id": exp_id,
-        "train_csv": str(TRAIN_CSV.relative_to(_REPO_ROOT)),
-        "test_ids_uploaded": test_ids_uploaded,
-        "chromosome": str(CHROMOSOME.relative_to(_REPO_ROOT)),
-    }
-    (OUT_DIR / "earth_ids.json").write_text(
-        json.dumps(ids, indent=2), encoding="utf-8"
-    )
-    print(json.dumps(ids, indent=2), flush=True)
-
+def wait_and_save(session, headers, exp_id: str, run_dir: Path) -> int:
     while True:
-        time.sleep(POLL_SECONDS)
         state = poll(session, headers, exp_id)
         status = state.get("status")
         print(
             f"  [{status}] gen={state.get('generation')} score={state.get('score')}",
             flush=True,
         )
-        if status in ("COMPLETED", "STAGNATED", "ERROR", "ABORTED"):
+        if status in FINAL_STATUSES:
             break
+        time.sleep(POLL_SECONDS)
 
     final = poll(session, headers, exp_id)
     champion = {
@@ -143,9 +159,9 @@ def main() -> int:
         "scalars": final.get("scalars") or {},
         "chromosome": final.get("chromosome"),
     }
-    champ_path = OUT_DIR / "champion_chromosome.json"
+    champ_path = run_dir / "champion_chromosome.json"
     champ_path.write_text(json.dumps(champion, indent=2), encoding="utf-8")
-    print(f"Wrote {champ_path}", flush=True)
+    print(f"Wrote {champ_path.relative_to(_REPO_ROOT)}", flush=True)
 
     if final.get("status") == "ERROR":
         print("Experiment ended in ERROR.", flush=True)
@@ -154,6 +170,121 @@ def main() -> int:
         print("No champion chromosome returned.", flush=True)
         return 1
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("--name", default="run1", help="Run label; output goes to work/runs/<name>/")
+    parser.add_argument("--chromosome", type=Path, default=_REPO_ROOT / "earth" / "chromosome.yaml")
+    parser.add_argument("--fitness", type=Path, default=_REPO_ROOT / "earth" / "fitness.py")
+    parser.add_argument("--minutes", type=int, default=15, help="Time cap for the run")
+    parser.add_argument("--pop", type=int, default=10, help="GA population size")
+    parser.add_argument("--units", type=int, default=5, help="Parallel fitness workers")
+    parser.add_argument("--cpus", type=int, default=1, help="CPUs per fitness worker")
+    parser.add_argument("--no-wait", action="store_true", help="Launch, save ids, and exit")
+    parser.add_argument("--collect", action="store_true",
+                        help="Do not launch; poll the experiment in work/runs/<name>/earth_ids.json and save the champion")
+    args = parser.parse_args()
+
+    run_dir = RUNS_DIR / args.name
+    ids_path = run_dir / "earth_ids.json"
+
+    if not check_credentials():
+        return 1
+
+    if args.collect:
+        if not ids_path.is_file():
+            print(f"Missing {ids_path.relative_to(_REPO_ROOT)}; launch the run first.", flush=True)
+            return 1
+        exp_id = json.loads(ids_path.read_text(encoding="utf-8"))["experiment_id"]
+        session, headers = auth(password_only=True)
+        return wait_and_save(session, headers, exp_id, run_dir)
+
+    for path in (TRAIN_CSV, TEST_IDS_CSV, args.chromosome, args.fitness):
+        if not path.is_file():
+            print(f"Missing {path}", flush=True)
+            return 1
+    if ids_path.is_file():
+        print(
+            f"{ids_path.relative_to(_REPO_ROOT)} already exists. Pick a new --name "
+            "so this run does not overwrite an earlier one.",
+            flush=True,
+        )
+        return 1
+
+    if not check_local(args.chromosome, args.fitness):
+        print("Fix the chromosome / fitness above before launching on Earth.", flush=True)
+        return 1
+
+    run_dir.mkdir(parents=True, exist_ok=True)
+    copy_into(args.chromosome, run_dir)
+    copy_into(args.fitness, run_dir)
+    settings = ga_settings(args.chromosome, args)
+
+    print("Authenticating...", flush=True)
+    try:
+        session, headers = auth(password_only=True)
+    except RuntimeError as exc:
+        print(f"Login failed: {exc}", flush=True)
+        return 1
+
+    name = f"s4-{args.name}-{int(time.time())}"
+    print(f"Uploading {TRAIN_CSV.name} as dataset '{name}'...", flush=True)
+    dataset_id = upload_dataset(session, headers, str(TRAIN_CSV), name)
+    test_ids_uploaded = upload_extra_asset(session, headers, dataset_id, TEST_IDS_CSV)
+    if not test_ids_uploaded:
+        print(
+            "Continuing without test_ids.csv: fitness keeps the 10 customers "
+            "shared with the test set.",
+            flush=True,
+        )
+
+    print("Creating project...", flush=True)
+    project_id = clone_template(session, headers, CHURN_TEMPLATE_ID, dataset_id, name)
+
+    print(
+        f"Launching: population {settings['pop']}, {settings['units']} workers x "
+        f"{settings['fitness_cpus']} CPU, time cap {settings['minutes']} min...",
+        flush=True,
+    )
+    exp_id = launch(
+        session,
+        headers,
+        project_id,
+        dataset_id,
+        chromo_path=str(args.chromosome),
+        code_files=[str(args.fitness)],
+        **settings,
+    )
+
+    ids = {
+        "run_name": args.name,
+        "earth_name": name,
+        "dataset_id": dataset_id,
+        "project_id": project_id,
+        "experiment_id": exp_id,
+        "test_ids_uploaded": test_ids_uploaded,
+        "chromosome": args.chromosome.name,
+        "fitness": args.fitness.name,
+        "settings": settings,
+    }
+    ids_path.write_text(json.dumps(ids, indent=2), encoding="utf-8")
+    print(json.dumps(ids, indent=2), flush=True)
+    print(
+        f"\nWatch it in the Earth UI: {BASE} -> Experiments -> '{name}' "
+        f"(experiment id {exp_id}).",
+        flush=True,
+    )
+
+    if args.no_wait:
+        print(
+            f"Not waiting. Later run:  python earth/run_search.py --name {args.name} --collect",
+            flush=True,
+        )
+        return 0
+    return wait_and_save(session, headers, exp_id, run_dir)
 
 
 if __name__ == "__main__":

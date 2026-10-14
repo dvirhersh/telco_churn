@@ -1,11 +1,13 @@
-"""Fitness for the Telco churn retention-call problem (matches telco_chromosome_v2.yaml).
+"""Fitness for the Telco churn retention-call problem (matches earth/chromosome.yaml).
 
 Decision: each month the retention team calls the 400 customers most likely to churn.
 Score: the course hit@400. Over 5 stratified folds (seed 42), each validation fold gets
 400 / 5 = 80 calls, so the score is the mean hit rate among the top 80 of each fold.
-This reproduces the course numbers (LR about 0.76, gentle HGB about 0.81).
+This reproduces the course numbers (logistic regression about 0.76, gentle boosting
+about 0.81, random list about 0.27).
 Per-fold scores and their standard deviation are reported as diagnostics; the GA
-optimises the mean only.
+optimises the mean only. A chromosome that fails to score gets ERROR_SCORE instead of
+raising, so one bad candidate cannot stop the run.
 """
 from pathlib import Path
 
@@ -49,6 +51,7 @@ MODEL_FAMILIES = ("logistic_regression", "random_forest", "xgboost")
 SCALERS = ("none", "standard", "minmax")
 ENCODINGS = ("onehot", "ordinal")
 CLASS_WEIGHTS = ("none", "balanced")
+ERROR_SCORE = 1e-9                  # Earth needs a finite, strictly positive score
 # ----------------------------------------------------------------------------------------
 
 
@@ -76,7 +79,7 @@ def load_table(path: Path) -> pd.DataFrame:
 
 
 def drop_test_customers(frame: pd.DataFrame, dataset_root: str) -> pd.DataFrame:
-    # S2 train_clean.csv still holds the 10 customers who are also in the test set.
+    # train_clean.csv still holds the 10 customers who are also in the test set.
     path = Path(dataset_root) / TEST_IDS_ASSET
     if not path.is_file():
         return frame
@@ -132,7 +135,7 @@ def build_model(genes: dict, y_fit: pd.Series):
             n_estimators=int(genes["rf_n_estimators"]), max_depth=max_depth,
             min_samples_leaf=max(1, round(10 ** float(genes["rf_min_samples_leaf_exponent"]))),
             max_features=str(genes["rf_max_features"]),
-            class_weight="balanced" if balanced else None, random_state=SEED, n_jobs=-1,
+            class_weight="balanced" if balanced else None, random_state=SEED, n_jobs=1,
         )
     else:
         n_pos = int(y_fit.sum())
@@ -144,7 +147,7 @@ def build_model(genes: dict, y_fit: pd.Series):
             subsample=float(genes["xgb_subsample"]),
             colsample_bytree=float(genes["xgb_colsample_bytree"]),
             scale_pos_weight=(len(y_fit) - n_pos) / max(n_pos, 1) if balanced else 1.0,
-            eval_metric="logloss", tree_method="hist", random_state=SEED, n_jobs=-1,
+            eval_metric="logloss", tree_method="hist", random_state=SEED, n_jobs=1,
         )
     return family, model
 
@@ -177,6 +180,13 @@ class FitnessClass:
         )
 
     def calculate_fitness(self, chromosome: dict) -> FitnessCalculationResult:
+        try:
+            return self._score(chromosome)
+        except Exception as exc:  # noqa: BLE001 -- Earth contract: never raise
+            print(f"fitness error: {exc!r}")
+            return FitnessCalculationResult(score=ERROR_SCORE, scalars={"error": 1})
+
+    def _score(self, chromosome: dict) -> FitnessCalculationResult:
         genes = chromosome.get("content", chromosome)
         selected = decode_mask(genes)
         numeric = [name for name in selected if name in NUMERIC_FEATURES]

@@ -404,6 +404,7 @@ def _ga_config(
     look_back: int = 8,
     generate_final_mutations: bool = False,
     enable_genetic_drift: bool = True,
+    concurrency: int = 32,
 ) -> dict:
     if enable_genetic_drift:
         drift_names = [
@@ -459,7 +460,7 @@ def _ga_config(
             "is_maximum_problem":       bool(maximize),
             "generate_final_mutations": generate_final_mutations,
         },
-        "ai2": {"output": {"concurrency": 32, "cpu_cores": 1}},
+        "ai2": {"output": {"concurrency": concurrency, "cpu_cores": 1}},
     }
 
 
@@ -487,6 +488,8 @@ def launch(
     look_back:           int   = 8,
     generate_final_mutations: bool = False,
     enable_genetic_drift: bool = True,
+    concurrency:  int   = 32,
+    fitness_cpus: "int | None" = None,
 ) -> str:
     """PATCH project with chromosome + fitness, then POST to start experiment.
 
@@ -527,6 +530,7 @@ def launch(
         look_back=look_back,
         generate_final_mutations=generate_final_mutations,
         enable_genetic_drift=enable_genetic_drift,
+        concurrency=concurrency,
     )
 
     patch = {
@@ -563,6 +567,8 @@ def launch(
     ]
 
     fu = dict(BASIC_COMPUTE_PROFILE)
+    if fitness_cpus is not None:
+        fu["fitness_cpu"] = int(fitness_cpus)
     fu["fitness_units_amount"] = units
     fu["total_cpus"]           = units * fu["fitness_cpu"] + 1
     fu["total_memory"]         = f"{(units + 1) * 8 + 2}.00Gi"

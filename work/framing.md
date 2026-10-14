@@ -1,21 +1,24 @@
-# Framing (fill during Step 1)
+# Framing notes (S4)
 
-## Goal
-
-
-## Prediction task and positive class
+## Goal (in your own words)
 
 
-## Workshop data assumption (restate in your own words)
+## Label and positive class
 
 
-## Metric contract
+## Metric: what hit@400 measures and why it fits the decision
 
 
 ## Feature boundary (in / out)
 
 
-## Fixed protocol (seed, splits, threshold)
+## Fixed protocol (folds, seed, capacity)
 
 
-## Will we optimize with Earth? Why?
+## Runs
+
+| Run | The one thing I changed | Why / what I expected | hit@400 | What I learned |
+|-----|-------------------------|-----------------------|---------|----------------|
+| run1 | nothing (UI files as is) | | | |
+| run2 | | | | |
+| run3 | | | | |

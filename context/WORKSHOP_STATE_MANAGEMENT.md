@@ -1,112 +1,30 @@
 # Workshop state management
 
 Humans and coding agents use this file to decide **where a change belongs**.
-Wrong placement either spoils the exercise (students see the solution) or
-leaves the starter broken.
 
-## Two states
+## Branches and tags
 
-| State | Git object | What it is |
-|-------|------------|------------|
-| Starting state | `workshop-1-start-vN` (current: `workshop-1-start-v3`), branch `main` | What students clone and check out |
-| Solution | `workshop-1-solution-vN` (current: `workshop-1-solution-v3`), branch `facilitator/solution` | Verified pathway after Earth + holdout |
+| Branch / tag | What it is |
+|--------------|------------|
+| `s4` | The S4 live session (from the Earth UI to the API). Complete on purpose: the chromosome and fitness from the UI run are included so students can run them as is. No tags yet. |
+| `main`, `workshop-1-start-vN` | Workshop 1 student starter (IBM five-table data, F1). Not used in S4. |
+| `facilitator/solution`, `workshop-1-solution-vN` | Workshop 1 verified pathway. Facilitator-only. |
 
-Branch `s4` is the S4 session (from the Earth UI to the API); it has no tags yet.
+Do not merge `s4` into `main` or `facilitator/solution`.
 
-`main` stays on the start tag. The solution is **not** merged into `main`.
-Keep the solution tag facilitator-only until the workshop is over.
+## Changes on `s4`
 
-```bash
-# starting point (students)
-git checkout workshop-1-start-v3
-
-# facilitator pathway
-git switch facilitator/solution
-```
-
-## Ask first: which mode?
-
-Before editing, the agent must identify the mode. If the user did not say,
-ask once:
-
-1. **Teacher mode** — change the starting state (what every student receives).
-2. **Student mode** — continue or revise the completed pathway (solution).
-
-Do not mix the two in one commit.
-
-## Teacher mode — merge into the starting state
-
-Use when the change must exist **before** a student begins Frame / Explore /
-Baseline / Earth.
-
-Typical teacher-mode work:
-
-- README, setup, prerequisites, checkout commands
-- `requirements.txt`, `.env.example`, `.gitignore`
-- `context/` (project context, pathway, this file, template reference)
-- `data/` and `data/data_dictionary.md`
-- Earth **client** and readiness tools: `earth/earth_client.py`,
-  `earth/check_connection.py`, `earth/validate_chromosome.py`, `earth/README.md`
-- Empty `work/` layout and the unfilled `work/framing.md` template
-- Auth / connection fixes that would otherwise block Step 0
-
-How to apply:
-
-1. Branch or check out from the current start tag (`workshop-1-start-vN` / `main`).
-2. Make only starter-safe changes. Do **not** add `work/modeling/`,
-   `work/exploration/prepare_data.py`, `earth/run_search.py`, filled reports,
-   train/holdout CSVs, or champion JSON.
-3. Commit on `main`.
-4. Create the **next** annotated start tag (`workshop-1-start-vN+1`). Do not
-   move a published start tag.
-5. Rebase or merge that start commit onto `facilitator/solution` so the
-   solution stays based on the new starter.
-6. If the solution still validates, retag `workshop-1-solution-vN+1`.
-7. Push `main`, `facilitator/solution`, and the new tags.
-
-Never copy solution files into `main` to “keep them in sync.”
-
-## Student mode — tag as solution
-
-Use when the change is part of **doing the workshop**: implementing the
-pathway, or fixing something that only exists after students start coding.
-
-Typical student-mode work:
-
-- Filled `work/framing.md` decisions
-- `work/exploration/prepare_data.py`, `train.csv`, `holdout.csv`
-- `work/modeling/` (pipeline, baseline, fitness, chromosome, smoke test,
-  champion validation)
-- `earth/run_search.py` and Earth run artifacts
-- `work/optimization/`, `work/delivery/report.md`
-
-How to apply:
-
-1. Work on `facilitator/solution`, branched from the current start tag.
-2. Keep the student README prompts. Do not rewrite the starter into a finished
-   project on `main`.
-3. After Earth run + holdout validation succeed, create or move the **next**
-   annotated solution tag (`workshop-1-solution-vN+1`).
-4. Do **not** merge into `main`. Do not push the solution to the student remote
-   until the workshop is finished, if that would leak the reference.
-
-## Decision rule
-
-| Question | Teacher (start) | Student (solution) |
-|----------|-----------------|--------------------|
-| Would a student need this on day one, before framing? | Yes | No |
-| Does it implement explore / baseline / Earth / delivery? | No | Yes |
-| Would seeing it skip a pathway decision? | Must not be in start | Belongs in solution |
-
-If both: split the change. Starter-safe docs/client go to `main` first; pathway
-code stays on `facilitator/solution`.
+- Session material (README, `AGENT_PROMPTS.md`, `earth/`, `data/`, `context/`)
+  is committed on `s4`.
+- Student runs live under `work/runs/<name>/` on each student's machine. They
+  are outputs, not session material; do not commit them to `s4`.
+- Homework material (extended dataset, framing, baseline flow) will get its own
+  branch or folder; keep it out of the live-session steps.
 
 ## Agent checklist
 
-- [ ] Mode is explicit (teacher or student).
-- [ ] Start tree still has empty `work/exploration`, `work/baseline`,
-      `work/optimization`, `work/delivery` (plus unfilled `framing.md` only).
-- [ ] Start tree has no `earth/run_search.py` and no `work/modeling/`.
-- [ ] New start tag is a new version (`vN+1`), not a moved published tag.
-- [ ] Solution remains based on the current start tag.
+- [ ] The change is on the right branch (`s4` for the live session).
+- [ ] `earth/chromosome.yaml` and `earth/fitness.py` still pass
+      `python earth/check_local.py`.
+- [ ] `data/test_clean.csv` is never uploaded or read by search code.
 - [ ] `.env` and `.earth_token_cache.json` are never committed.
