@@ -1,4 +1,4 @@
-"""Earth REST client for the S4 telco churn search.
+"""Earth REST client: auth, dataset upload, project clone, launch, poll, abort.
 
 Adapted from EARTH_AGENT_GUIDE.md.
 Usage: see earth/README.md; earth/run_search.py runs the full search.
@@ -25,6 +25,7 @@ BASE = "https://earth.evolution.inc"
 TOKEN_CACHE_PATH = Path(__file__).resolve().parent.parent / ".earth_token_cache.json"
 
 # Clone any existing valid project to inherit a well-formed GA configuration.
+# (Earth's "Churn Prediction" template; its chromosome and fitness are replaced at launch.)
 CHURN_TEMPLATE_ID = "fb775bea36244a829cd79f5d7364016b"
 
 BASIC_COMPUTE_PROFILE = {
@@ -451,7 +452,7 @@ def launch(
     fu["total_memory"]         = f"{(units + 1) * 8 + 2}.00Gi"
 
     body = {
-        "name":       proj.get("title", "telco-churn-ga"),
+        "name":       proj.get("title", "earth-ga"),
         "project_id": project_id,
         "shared":     False,
         "configuration": {

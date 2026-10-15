@@ -1,34 +1,40 @@
-# Data dictionary — Telco churn (teaching copy)
+# Data dictionary — Bank Marketing (homework copy)
 
-**Source.** Based on the public IBM "Telco Customer Churn" sample dataset. This teaching copy was prepared by Evolution.inc for the Infinity Labs pre-training. It contains a few deliberate data problems for you to find.
+**Source.** UCI Machine Learning Repository, "Bank Marketing"
+(`bank-additional-full.csv`; S. Moro, P. Cortez, P. Rita, 2014; CC BY 4.0). The
+original documentation is in `bank-additional-names.txt`.
 
-**These files.** `train_clean.csv` is the cleaned S1/S2 training file. `test_ids.csv` holds only the `customerID` column of the course's locked test set; the test labels are not in this repo.
+**This file.** `bank_10k.csv`: 10,000 of the 41,188 contacts, sampled at random
+and stratified on `y`, kept in the original date order (May 2008 – November
+2010). 11.3% of contacts end in a subscription.
 
-**What a row is.** One row per customer account, taken from a single snapshot of the customer base. The file has no dates.
+**What a row is.** One phone contact with one client during a term-deposit
+campaign, with the client's profile, the contact history, and the economic
+context at the time.
 
-**The label.** `Churn`: whether the customer left within the month before the snapshot (`Yes` / `No`).
+**The label.** `y`: did the client subscribe to a term deposit? (`yes` / `no`)
 
-| Column | Meaning | Values |
+| Column | Meaning | Values / notes |
 |---|---|---|
-| `customerID` | Customer account identifier | text |
-| `gender` | Customer's gender | Female, Male |
-| `SeniorCitizen` | Customer is 65 or older | 0, 1 |
-| `Partner` | Customer has a partner | Yes, No |
-| `Dependents` | Customer has dependents | Yes, No |
-| `tenure` | Months the customer has been with the company | 0–72 |
-| `PhoneService` | Has a phone line | Yes, No |
-| `MultipleLines` | Has more than one phone line | Yes, No, No phone service |
-| `InternetService` | Type of internet service | DSL, Fiber optic, No |
-| `OnlineSecurity` | Online security add-on | Yes, No, No internet service |
-| `OnlineBackup` | Online backup add-on | Yes, No, No internet service |
-| `DeviceProtection` | Device protection add-on | Yes, No, No internet service |
-| `TechSupport` | Technical support add-on | Yes, No, No internet service |
-| `StreamingTV` | TV streaming add-on | Yes, No, No internet service |
-| `StreamingMovies` | Movie streaming add-on | Yes, No, No internet service |
-| `Contract` | Contract term | Month-to-month, One year, Two year |
-| `PaperlessBilling` | Receives paperless bills | Yes, No |
-| `PaymentMethod` | How the customer pays | Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic) |
-| `MonthlyCharges` | Current monthly charge | amount |
-| `TotalCharges` | Total amount charged to date | amount |
-| `LastContactReason` | Reason for the customer's most recent contact with the call centre *(removed in S1 cleaning: leak, not in these files)* | Cancellation request, Billing question, Technical issue, Plan change, No contact |
-| `Churn` | **Label.** Left within the month before the snapshot | Yes, No |
+| `contact_order` | Position of the contact in the original, date-ordered file (smaller = earlier) | Integer. Added for this homework; an identifier, and also a clock |
+| `age` | Client age | Years |
+| `job` | Type of job | 12 categories, incl. `unknown` |
+| `marital` | Marital status | `married`, `single`, `divorced`, `unknown` |
+| `education` | Education level | 8 categories, incl. `unknown` |
+| `default` | Has credit in default? | `no`, `unknown` (`yes` is almost absent in the full data and absent here) |
+| `housing` | Has a housing loan? | `no`, `yes`, `unknown` |
+| `loan` | Has a personal loan? | `no`, `yes`, `unknown` |
+| `contact` | Phone type used for the contact | `cellular`, `telephone` |
+| `month` | Month of the last contact | `mar` … `dec` (no contacts in January or February) |
+| `day_of_week` | Weekday of the last contact | `mon` … `fri` |
+| `duration` | Length of the last call, in seconds | **Read the note in `bank-additional-names.txt` before using it** |
+| `campaign` | Number of contacts with this client in this campaign, including this one | Integer |
+| `pdays` | Days since the client was last contacted in a previous campaign | Integer; **999 means never contacted before** |
+| `previous` | Number of contacts with this client before this campaign | Integer |
+| `poutcome` | Outcome of the previous campaign | `failure`, `nonexistent`, `success` |
+| `emp.var.rate` | Employment variation rate, quarterly | Economy, same for everyone in the period |
+| `cons.price.idx` | Consumer price index, monthly | Economy |
+| `cons.conf.idx` | Consumer confidence index, monthly | Economy |
+| `euribor3m` | 3-month Euribor interest rate, daily | Economy |
+| `nr.employed` | Number of employees, quarterly | Economy |
+| `y` | **Label.** Subscribed to a term deposit? | `yes`, `no` |

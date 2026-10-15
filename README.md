@@ -1,157 +1,275 @@
-# Earth DS Workshop — Churn Prediction (S4: from the Earth UI to the API)
+# Earth DS Homework — Term-deposit phone campaign
 
-> **Before class:** do [Step 0](#step-0--set-up) (venv, `pip install -r requirements.txt`, `.env` with your Earth login) so class starts at Step 1.
+> **Before you start:** read [PROJECT_BRIEF.md](PROJECT_BRIEF.md) (10 minutes),
+> then do Step 0. Budget: about 8 hours for the core track, 1–2 more for stretch
+> items.
 
-## The session
+## The homework
 
-You ran a churn search in the Earth UI. Today you run the same search from your
-terminal through the Earth API, read what it searched and how it scored, change
-one thing, and run again.
+A bank calls clients to sell term deposits. A call costs €10; a subscription
+earns €70. Only about 1 call in 9 succeeds, so calling everyone loses money.
+You will walk the whole pathway on this new problem: frame it, explore the
+data, design the evaluation, build baselines, formulate an Earth search, run
+it through the API, analyse the experiment, and read the test set once.
 
-The decision: each month the retention team calls the **400 customers most likely
-to leave**. The score is **hit@400**: the share of those 400 who actually churn
-(5 stratified folds, top 80 per fold, averaged). A random list scores about 0.27,
-logistic regression about 0.76.
+You own the decisions. Your coding agent writes code with you; prompts are in
+[AGENT_PROMPTS.md](AGENT_PROMPTS.md). Stuck? See [HINTS.md](HINTS.md).
 
-| Step | What you do | Time |
-|------|-------------|------|
-| 0 | Set up, put your Earth login in `.env` | 10 min |
-| 1 | Run the search as is (`run1`) | 25 min |
-| 2 | Read the search space and the fitness | 25 min |
-| 3 | Change one thing in the chromosome, run again (`run2`) | 25 min |
-| 4 | If time: change one thing in the fitness (`run3`) | — |
-
-Each step can be done by hand in the terminal or by asking your coding agent.
-Prompts for the agent: [AGENT_PROMPTS.md](AGENT_PROMPTS.md).
+Every step below has:
+- **Read first:** the document to read before you start the step.
+- **Do:** the work.
+- **Deliver:** what must exist under `work/` when you finish.
+- **Done when:** the check that ends the step.
+- **Stretch:** an extra for when you have time. Optional.
 
 ## Repository
 
 ```text
-data/            train_clean.csv, test_ids.csv, data_dictionary.md
-earth/           chromosome.yaml + fitness.py (from the UI run), run_search.py,
-                 check_local.py, compare_runs.py, WALKTHROUGH.md, Earth client
-work/            run_notes.md; runs/ holds one folder per run (created by run_search.py)
+PROJECT_BRIEF.md              Business frame, money, the framing questions
+EXPERIMENT_ANALYSIS_GUIDE.md  Step 8: how to analyse an Earth experiment
+HINTS.md                      Support material if you get stuck
+AGENT_PROMPTS.md              Prompts for your coding agent, per step
+data/                         bank_10k.csv, data_dictionary.md, bank-additional-names.txt
+context/pathway.md            Phases, practices, the two rules, split vocabulary
+context/methods/              Practices one-pager, tabular EDA and split guidelines
+context/template/             Chromosome philosophy, invariants, constraints, gene menu
+earth/                        Earth client and tools, fitness_skeleton.py
+work/                         Your work (templates to fill in)
 ```
-
-| Data file | Role |
-|-----------|------|
-| `data/train_clean.csv` | Uploaded to Earth; the search runs on it |
-| `data/test_ids.csv` | IDs of the customers in the course's locked test set; uploaded so the fitness drops the 10 of them that also appear in train |
-
-Column meanings: [data/data_dictionary.md](data/data_dictionary.md).
 
 ## Step 0 — Set up
 
 You need Python 3.12 and your Earth login.
 
 ```bash
-git clone --branch s4-class-v1 --single-branch https://github.com/vasiliyk-gif/telco_churn.git
-cd telco_churn
+git clone --branch hw --single-branch https://github.com/vasiliyk-gif/telco_churn.git earth_hw
+cd earth_hw
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Open `.env` and put your Earth user and password in `EARTH_USER` / `EARTH_PASS`
-(the login name is often the part before `@`). Never commit `.env`.
-
-On Windows: `.venv\Scripts\activate` and `copy .env.example .env`.
-
-Check the connection (no experiment is created):
+Put your Earth user and password in `.env` (`EARTH_USER` / `EARTH_PASS`). Never
+commit `.env`. On Windows: `.venv\Scripts\activate` and `copy .env.example .env`.
 
 ```bash
 python earth/check_connection.py
 ```
 
-## Step 1 — Run the search as is
+**Done when:** the connection check prints `Connection check OK.`
+
+## Step 1 — Frame
+
+**Read first:** [PROJECT_BRIEF.md](PROJECT_BRIEF.md);
+[practices one-pager](context/methods/PROJECT_DELIVERY_PRACTICES_ONE_PAGER.md), Frame phase.
+
+**Do:** in your own words, write the business question, the decision, the
+target, the unit of analysis, the money, and what success means.
+
+**Deliver:** `work/framing.md`.
+
+**Done when:** success is written as numbers. For example: the champion's
+profit on the test set beats both calling everyone and the simple rule.
+
+## Step 2 — Explore and freeze the split
+
+**Read first:** [TABULAR_EDA_AND_SPLIT_GUIDELINES.md](context/methods/TABULAR_EDA_AND_SPLIT_GUIDELINES.md)
+§3.5–3.7 and §4.4, §4.8, and the hand-off checklist at the end;
+[data/data_dictionary.md](data/data_dictionary.md).
+
+**Do:**
+- Run the standard EDA checks on `data/bank_10k.csv`: shape, target rate,
+  missing and `unknown` values, types, feature–target signal.
+- Decide the **feature boundary**: which columns are known before you decide to
+  call? Write a reason for every column you exclude.
+- Look at `pdays = 999` and the `unknown` values: what do they mean?
+- Plot the subscription rate and the economic columns against `contact_order`.
+  What changes over time?
+- Freeze the split **once**: a stratified random 80/20 split with seed 42 into
+  `work/exploration/train.csv` and `work/exploration/test.csv`, plus
+  `split_metadata.json` (method, seed, sizes, positive rates).
+
+**Deliver:** `work/exploration/` (your EDA notebook or script, the split
+script, `train.csv`, `test.csv`, `split_metadata.json`) and the feature boundary
+in `work/framing.md`.
+
+**Done when:** every item of the guideline's hand-off checklist is ticked.
+
+**Stretch:** also build a chronological split (train on earlier contacts, test
+on later ones) in a separate folder, and compare the positive rates and a quick
+baseline's profit on both. Report what you see; keep the random split as your
+frozen split.
+
+## Step 3 — Design the evaluation
+
+**Read first:** [practices one-pager](context/methods/PROJECT_DELIVERY_PRACTICES_ONE_PAGER.md),
+Solution Design; [context/pathway.md](context/pathway.md).
+
+**Do:** before training any model, write how a model will be scored:
+- the cross-validation scheme on `train.csv` (folds, seed);
+- how predicted probabilities become a **call list** (a probability cut-off?
+  the top share of clients?), and what happens to that rule if the
+  probabilities are off;
+- how profit is computed on each fold, and how it becomes a score;
+- how you will check the champion on fresh folds before the test read.
+
+**Deliver:** `work/design.md`.
+
+**Done when:** someone else could implement your scoring from `design.md` alone.
+
+## Step 4 — Baselines
+
+**Read first:** [context/pathway.md](context/pathway.md), rule 2 and Gate 3.
+
+**Do:** score three references with your Step 3 protocol, on `train.csv` only:
+1. call everyone;
+2. a simple business rule: call every client whose previous campaign
+   succeeded (`poutcome == "success"`);
+3. logistic regression, calling everyone whose predicted chance is above the
+   break-even (€10 / €70 ≈ 14%).
+
+**Deliver:** `work/baseline/` (code and metrics: profit per 1,000 clients,
+share of clients called).
+
+**Done when:** you have answered **Gate 3** in `work/design.md`: does the
+baseline leave enough to gain to justify an Earth search? How much gain would
+convince you?
+
+**Stretch:** a calibration check of the logistic regression: among clients
+scored near 14%, do about 14% subscribe?
+
+## Step 5 — Formulate the search
+
+**Read first:** [context/template/CHROMOSOME_PHILOSOPHY.md](context/template/CHROMOSOME_PHILOSOPHY.md)
+(including the note on policy genes);
+[context/template/default_chromosome.yaml](context/template/default_chromosome.yaml) as a menu of gene ideas;
+[earth/context/CHROMOSOME_GUIDE.md](earth/context/CHROMOSOME_GUIDE.md) for YAML syntax.
+
+**Do:** decide what Earth may change and what stays fixed.
+- Candidates for genes: model family and hyperparameters; class weight;
+  feature groups (for example, a gene that switches the economic columns on or
+  off); handling of `pdays = 999`; the calling policy and its parameter.
+- Fixed: the money, the folds and seed, the feature boundary from Step 2.
+
+**Deliver:** `work/optimization/formulation.md`: every gene with a reason, and
+the fixed list.
+
+**Done when:** for every gene you can say which code in `fitness.py` will read it.
+
+**Stretch:** preprocessing genes from the menu, such as how to treat `unknown`
+(keep it as a category, or impute it).
+
+## Step 6 — Package and validate
+
+**Read first:** [context/template/INVARIANTS.md](context/template/INVARIANTS.md),
+[CONSTRAINTS.md](context/template/CONSTRAINTS.md),
+[earth/context/GA_CONTRACT.md](earth/context/GA_CONTRACT.md),
+[earth/context/FITNESS_DEVELOPMENT.md](earth/context/FITNESS_DEVELOPMENT.md).
+
+**Do:**
+
+```bash
+cp earth/fitness_skeleton.py work/optimization/fitness.py
+```
+
+Fill in the TODOs in `work/optimization/fitness.py`, and write
+`work/optimization/chromosome.yaml`: a `fitness_function` line and a
+`chromosome` block with only your genes (format: [HINTS.md](HINTS.md), Step 5;
+more gene examples in `context/template/default_chromosome.yaml`). Then:
+
+```bash
+python earth/check_local.py
+python earth/validate_chromosome.py work/optimization/chromosome.yaml
+```
+
+Time one fitness call (the local check prints a score per model family; time
+it) and estimate the run: generations × ⌈population ÷ workers⌉ × time per call.
+
+**Deliver:** `work/optimization/fitness.py`, `work/optimization/chromosome.yaml`,
+the run estimate in `work/optimization/formulation.md`.
+
+**Done when:** both checks pass, and the run estimate fits in about 15 minutes.
+
+## Step 7 — Run the search
+
+**Read first:** [earth/README.md](earth/README.md) for the run options;
+the "Before you press Run" slide from the Earth lab.
+
+**Do:**
 
 ```bash
 python earth/run_search.py --name run1
 ```
 
-It checks the chromosome and fitness locally, uploads `train_clean.csv` +
-`test_ids.csv`, launches on Earth, and polls until the run stops (time cap 15
-minutes). It prints the experiment name; watch the generations in the Earth UI.
+It checks your files locally, uploads `work/exploration/train.csv` (never
+`test.csv`; it refuses), launches on Earth, polls until the run stops (default
+cap 15 minutes; `--minutes`, `--pop`, `--units`, `--cpus` change the size), and
+saves `work/runs/run1/`.
 
-Results land in `work/runs/run1/` (add a line to `work/run_notes.md`):
-
-- `earth_ids.json` — Earth ids and settings. Check `"test_ids_uploaded": true`.
-- `champion_chromosome.json` — the best chromosome and its hit@400 per fold.
-- `chromosome.yaml`, `fitness.py` — copies of exactly what ran.
-
-Lost the terminal? Launch with `--no-wait`, and collect later with
-`python earth/run_search.py --name run1 --collect`.
-
-Class sizing: population 10, 5 workers × 1 CPU, 15-minute cap. Change with
-`--pop`, `--units`, `--cpus`, `--minutes`. All other GA settings come from the
-`ai1` block of the chromosome YAML.
-
-## Step 2 — Read the search space and the fitness
-
-Open [earth/chromosome.yaml](earth/chromosome.yaml) and
-[earth/fitness.py](earth/fitness.py). Work through
-[earth/WALKTHROUGH.md](earth/WALKTHROUGH.md): first by eye, then with your agent.
-Compare what you read with your `run1` champion.
-
-## Step 3 — Change one thing in the chromosome, run again
-
-Edit a copy, never the original:
+Then copy your fitness, change **only the score** to F1 at threshold 0.5, and
+run the same chromosome again:
 
 ```bash
 mkdir -p work/runs/run2
-cp earth/chromosome.yaml work/runs/run2/chromosome.yaml
-```
-
-Change **one** thing in `work/runs/run2/chromosome.yaml` (ideas in the
-walkthrough), write the change and your prediction in `work/run_notes.md`,
-then check and run:
-
-```bash
-python earth/check_local.py --chromosome work/runs/run2/chromosome.yaml
-python earth/run_search.py --name run2 --chromosome work/runs/run2/chromosome.yaml
+cp work/optimization/fitness.py work/runs/run2/fitness.py
+# edit: score = F1 on each fold instead of profit; keep the profit scalars
+python earth/check_local.py --fitness work/runs/run2/fitness.py
+python earth/run_search.py --name run2 --fitness work/runs/run2/fitness.py
 python earth/compare_runs.py run1 run2
 ```
 
-`compare_runs.py` shows both champions side by side and the lines you changed.
+**Deliver:** `work/runs/run1/`, `work/runs/run2/`, and a line per run in
+`work/run_notes.md`.
 
-## Step 4 — If time: change one thing in the fitness
+**Done when:** you can say which champion makes more money on the validation
+folds, and why the F1 champion differs.
+
+**Stretch:** run3, one more change of your choice (in the chromosome or the
+fitness).
+
+## Step 8 — Analyse the experiment
+
+**Read first:** [EXPERIMENT_ANALYSIS_GUIDE.md](EXPERIMENT_ANALYSIS_GUIDE.md),
+questions 1–5.
+
+**Do:**
 
 ```bash
-mkdir -p work/runs/run3
-cp earth/fitness.py work/runs/run3/fitness.py
+python earth/fetch_history.py --name run1
 ```
 
-Change one thing in `work/runs/run3/fitness.py`, then:
+It downloads every generation into `work/runs/run1/history.csv` and prints the
+score per generation, gene shifts, and the top 5. Then work through questions
+1–5 of the guide, including the re-score on fresh folds.
 
-```bash
-python earth/check_local.py --fitness work/runs/run3/fitness.py
-python earth/run_search.py --name run3 --fitness work/runs/run3/fitness.py
-python earth/compare_runs.py run1 run3
-```
+**Deliver:** `work/analysis/` and the analysis sections of
+`work/delivery/report.md`.
 
-**A changed fitness changes what the score means.** A run3 hit rate is not
-comparable with run1 or run2 unless you score both champions with the same
-fitness.
+**Done when:** checklist items 1–5 of the guide are ticked.
 
-## Next: homework
+## Step 9 — Test read and report
 
-The homework moves to a new dataset and the full cycle: framing, baseline,
-search, a check on fresh folds, and one test read. Details will follow.
+**Read first:** [EXPERIMENT_ANALYSIS_GUIDE.md](EXPERIMENT_ANALYSIS_GUIDE.md),
+question 6; [context/pathway.md](context/pathway.md), rule 1.
 
-## Working with your coding agent
+**Do:** fit call-everyone, the simple rule, the logistic-regression baseline,
+and your champion on all of `train.csv`, and score each **once** on `test.csv`.
 
-You own what the problem means, which features are allowed, the metric, what Earth
-may change, and whether a champion is better. The agent may read files, explain
-code, run commands, and draft edits for you to review.
+**Deliver:** `work/delivery/report.md`, complete.
+
+**Done when:** the report has the profit table on the test set, your verdict
+against the success criterion from Step 1, and your answer to: *If you ran a
+second optimization experiment, what would you let Earth evolve next, and why?*
 
 ## Troubleshooting
 
 - `Put your Earth user and password in .env`: `.env` still has the example values.
 - `Login failed`: check the login name (often without `@domain`) and password.
-- `Local check FAILED`: read the line above it; a common cause is a `feature_mask`
-  size that no longer matches the `FEATURES` list in `fitness.py`.
+- `Local check FAILED`: read the line above it. Common causes: a gene in the YAML
+  that the fitness does not read (or the reverse), an enum value the fitness does
+  not handle, a column outside your feature boundary.
+- `Refusing to upload ... test.csv`: the test set never goes to Earth.
 - `already exists. Pick a new --name`: each run needs its own name.
 - Enum genes need `crossover: {type: error}`.
-- Upload only `train_clean.csv` and `test_ids.csv`.
-- Validate a chromosome on Earth: `python earth/validate_chromosome.py <path>`.
+- Fitness score must be finite and > 0 (`max(score, 1e-9)`).

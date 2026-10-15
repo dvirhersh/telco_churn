@@ -4,9 +4,11 @@ Usage (from repo root):
     python earth/compare_runs.py                 # every run under work/runs/
     python earth/compare_runs.py run1 run2       # just these runs
 
-For each run: status, generations, champion hit@400 (mean, std, per fold), model
-family and features. Then the lines of chromosome.yaml / fitness.py that differ
-from the first run, so you can see the one thing you changed.
+For each run: status, generations, champion score, the std and per-fold values
+your fitness reported (any scalar ending in "_std", any per-fold dictionary),
+the other scalars, and the champion's genes side by side. Then the lines of
+chromosome.yaml / fitness.py that differ from the first run, so you can see the
+one thing you changed.
 No Earth calls; reads work/runs/<name>/ only.
 """
 
@@ -15,14 +17,9 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
-import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from check_local import load_fitness_module  # noqa: E402
-
 RUNS_DIR = _REPO_ROOT / "work" / "runs"
 
 
@@ -34,48 +31,53 @@ def load_run(run_dir: Path) -> dict | None:
     genes = champion.get("chromosome") or {}
     genes = genes.get("content", genes)
     scalars = champion.get("scalars") or {}
-
-    features = None
-    fitness_py = run_dir / "fitness.py"
-    if fitness_py.is_file() and "feature_mask" in genes:
-        try:
-            names = load_fitness_module(fitness_py).FEATURES
-            features = [n for n, keep in zip(names, genes["feature_mask"]) if keep]
-        except Exception:  # noqa: BLE001 — feature names are a nice-to-have
-            features = None
-
-    per_fold = scalars.get("hit_rate_at_400_per_fold") or {}
+    std = next((v for k, v in scalars.items() if k.endswith("_std") and not isinstance(v, dict)), None)
+    per_fold = next((v for v in scalars.values() if isinstance(v, dict)), {})
+    others = {k: v for k, v in scalars.items() if not isinstance(v, dict) and not k.endswith("_std")}
     return {
         "name": run_dir.name,
         "status": champion.get("status"),
         "generation": champion.get("generation"),
         "score": champion.get("fitness_score"),
-        "std": scalars.get("hit_rate_at_400_std"),
+        "std": std,
         "per_fold": [per_fold[k] for k in sorted(per_fold)],
-        "model_family": genes.get("model_family"),
-        "features": features,
+        "scalars": others,
         "genes": genes,
     }
 
 
 def fmt(value, digits: int = 4) -> str:
+    if isinstance(value, bool) or value is None:
+        return "-" if value is None else str(value)
     if isinstance(value, float):
         return f"{value:.{digits}f}"
-    return "-" if value is None else str(value)
+    if isinstance(value, list):
+        if all(isinstance(v, bool) for v in value):
+            return "".join("1" if v else "0" for v in value)
+        return json.dumps(value)
+    if isinstance(value, dict):
+        return json.dumps(value, sort_keys=True)
+    return str(value)
 
 
 def file_diff(first: Path, other: Path) -> list[str]:
     if not first.is_file() or not other.is_file():
         return []
-    lines = difflib.unified_diff(
+    return list(difflib.unified_diff(
         first.read_text(encoding="utf-8").splitlines(),
         other.read_text(encoding="utf-8").splitlines(),
         fromfile=str(first.relative_to(_REPO_ROOT)),
         tofile=str(other.relative_to(_REPO_ROOT)),
         n=0,
         lineterm="",
-    )
-    return list(lines)
+    ))
+
+
+def table(header: list[str], rows: list[list[str]]) -> None:
+    widths = [max(len(h), *(len(r[i]) for r in rows)) for i, h in enumerate(header)]
+    print("  ".join(h.ljust(w) for h, w in zip(header, widths)))
+    for r in rows:
+        print("  ".join(c.ljust(w) for c, w in zip(r, widths)))
 
 
 def main() -> int:
@@ -95,19 +97,21 @@ def main() -> int:
         print(f"No finished runs under {RUNS_DIR.relative_to(_REPO_ROOT)}.")
         return 1
 
-    print(f"\n{'run':<10}{'status':<12}{'gen':>5}{'hit@400':>10}{'std':>8}  {'model':<22}per-fold")
-    for run in runs:
-        folds = " ".join(fmt(x, 3) for x in run["per_fold"])
-        print(
-            f"{run['name']:<10}{fmt(run['status']):<12}{fmt(run['generation']):>5}"
-            f"{fmt(run['score']):>10}{fmt(run['std'], 3):>8}  {fmt(run['model_family']):<22}{folds}"
-        )
+    print()
+    table(["run", "status", "gen", "score", "std", "per-fold"],
+          [[r["name"], fmt(r["status"]), fmt(r["generation"]), fmt(r["score"]), fmt(r["std"], 3),
+            " ".join(fmt(x, 3) for x in r["per_fold"])] for r in runs])
 
-    print("\nChampion features:")
-    for run in runs:
-        feats = run["features"]
-        shown = f"{len(feats)}: {', '.join(feats)}" if feats is not None else "-"
-        print(f"  {run['name']}: {shown}")
+    keys = sorted({k for r in runs for k in r["scalars"]})
+    if keys:
+        print("\nOther scalars:")
+        table(["scalar"] + [r["name"] for r in runs],
+              [[k] + [fmt(r["scalars"].get(k), 3) for r in runs] for k in keys])
+
+    genes = list(dict.fromkeys(g for r in runs for g in r["genes"]))
+    print("\nChampion genes:")
+    table(["gene"] + [r["name"] for r in runs],
+          [[g] + [fmt(r["genes"].get(g), 3) for r in runs] for g in genes])
 
     first = RUNS_DIR / runs[0]["name"]
     for run in runs[1:]:

@@ -1,48 +1,80 @@
-# Prompts for your coding agent (S4)
+# Prompts for your coding agent (homework)
 
-Copy, paste, adapt. Read what the agent does before you accept it.
+Copy, paste, adapt. You make the decisions; the agent writes code and explains.
+Read what it does before you accept it.
 
 ## Step 0 — Set up
 
-> I'm in the telco_churn repo on branch s4. Create a Python 3.12 virtual
-> environment in .venv, install requirements.txt, and copy .env.example to .env.
-> Do not write my password anywhere; I will fill .env myself.
+> I'm in the earth_hw repo. Create a Python 3.12 virtual environment in .venv,
+> install requirements.txt, and copy .env.example to .env. Don't write my
+> password anywhere; I'll fill .env myself. Then run `python earth/check_connection.py`.
 
-> Run `python earth/check_connection.py` and explain the output.
+## Step 1 — Frame
 
-## Step 1 — Run the search as is
+> Read PROJECT_BRIEF.md and ask me, one at a time, the questions I need to answer
+> in work/framing.md. Don't answer them for me; help me sharpen my wording.
 
-> Run `python earth/run_search.py --name run1` and tell me what each stage of the
-> output means while it runs.
+## Step 2 — Explore and split
 
-> Open work/runs/run1/earth_ids.json and champion_chromosome.json. Was
-> test_ids.csv uploaded? Which model won, which features did it keep, and how
-> stable are the per-fold hit rates?
+> Following context/methods/TABULAR_EDA_AND_SPLIT_GUIDELINES.md §3.5, write an
+> EDA script for data/bank_10k.csv in work/exploration/. Show shape, target rate,
+> `unknown` share per column, the `pdays == 999` share, and subscription rate by
+> poutcome, contact and month.
 
-## Step 2 — Read the search space and fitness
+> Plot the subscription rate and the five economic columns against contact_order
+> (deciles). What changes over time, and what does that mean for a random split?
 
-> Explain earth/chromosome.yaml gene by gene. For each gene, say which model
-> family uses it and what range of real values it maps to.
+> Read the description of `duration` in data/bank-additional-names.txt and tell
+> me what it says. (Then decide yourself.)
 
-> Walk me through FitnessClass in earth/fitness.py for one chromosome, from
-> loading the CSV to the hit@400 score. Why are the folds fixed once?
+> Write work/exploration/prepare_split.py: stratified random 80/20, seed 42,
+> writing train.csv, test.csv and split_metadata.json. Run it once.
 
-> Using earth/WALKTHROUGH.md, quiz me on the search space one question at a time.
-> Don't give the answer until I try.
+## Step 3 — Design
 
-## Step 3 — One change in the chromosome
+> Here is my evaluation design: <paste>. Point out anything ambiguous, and what
+> could go wrong if the model's probabilities are miscalibrated.
 
-> I want to change one thing in the search space: <your idea>. Copy
-> earth/chromosome.yaml to work/runs/run2/chromosome.yaml, make only that change,
-> and show me the diff. Then run `python earth/check_local.py --chromosome
-> work/runs/run2/chromosome.yaml`.
+## Step 4 — Baselines
 
-> Run `python earth/run_search.py --name run2 --chromosome
-> work/runs/run2/chromosome.yaml`, then `python earth/compare_runs.py run1 run2`,
-> and help me decide whether the change helped or was just noise.
+> Implement the three baselines from the README in work/baseline/, scored with
+> the protocol in work/design.md, on train.csv only. Report profit per 1,000
+> clients (mean and std over folds) and the share of clients called.
 
-## Step 4 — One change in the fitness (if time)
+## Step 5 — Formulate
 
-> Copy earth/fitness.py to work/runs/run3/fitness.py and change only <your idea>.
-> Show me the diff and explain how it changes what the score means. Then run
-> `python earth/check_local.py --fitness work/runs/run3/fitness.py`.
+> Here is my formulation: <paste>. For each gene, tell me which code in
+> fitness.py would read it, and flag any gene that would have no effect for some
+> model families.
+
+## Step 6 — Package
+
+> Copy earth/fitness_skeleton.py to work/optimization/fitness.py and fill in the
+> TODOs according to work/design.md and work/optimization/formulation.md. Write
+> work/optimization/chromosome.yaml with exactly the genes the fitness reads.
+> Then run `python earth/check_local.py` and fix what fails.
+
+> Run `python earth/validate_chromosome.py work/optimization/chromosome.yaml`
+> and explain the result.
+
+## Step 7 — Run
+
+> Run `python earth/run_search.py --name run1` and explain each stage of the
+> output while it runs.
+
+> Copy work/optimization/fitness.py to work/runs/run2/fitness.py and change only
+> the score to mean F1 at threshold 0.5 over the folds, keeping the profit
+> scalars. Show me the diff, run the local check, then run2, then
+> `python earth/compare_runs.py run1 run2`.
+
+## Step 8 — Analyse
+
+> Run `python earth/fetch_history.py --name run1`, then help me answer questions
+> 1–5 of EXPERIMENT_ANALYSIS_GUIDE.md one by one, with a table or plot for each,
+> saved under work/analysis/.
+
+## Step 9 — Test read
+
+> Write work/delivery/test_read.py: fit the four policies on all of train.csv and
+> score each once on test.csv (profit per 1,000, share called). Run it once.
+> Then help me draft work/delivery/report.md from my notes; I'll write the verdict.

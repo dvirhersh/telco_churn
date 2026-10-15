@@ -1,15 +1,15 @@
 """Local pre-flight check: does this chromosome + fitness pair run on your laptop?
 
-Usage:
+Usage (from repo root):
     python earth/check_local.py
     python earth/check_local.py --chromosome work/runs/run2/chromosome.yaml
-    python earth/check_local.py --fitness work/runs/run3/fitness.py
+    python earth/check_local.py --fitness work/runs/run3/fitness.py --train work/exploration/train.csv
 
 Builds one sample chromosome per model family from the YAML (first enum value,
-range minimums, all features on), runs FitnessClass on data/train_clean.csv +
-data/test_ids.csv in a temporary folder, and checks every score is finite and
-positive. Catches wrong feature_mask sizes, enum values the fitness does not
-know, and broken fitness edits before you spend an Earth run on them.
+middle of every range, bools and bool arrays on), copies the training CSV (and any --assets)
+into a temporary folder the way Earth does, runs FitnessClass on it, and checks
+every score is finite and positive. Catches wrong array sizes, enum values the
+fitness does not know, and broken fitness code before you spend an Earth run.
 No Earth calls.
 """
 
@@ -21,14 +21,16 @@ import math
 import shutil
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-TRAIN_CSV = _REPO_ROOT / "data" / "train_clean.csv"
-TEST_IDS_CSV = _REPO_ROOT / "data" / "test_ids.csv"
-# Fitness modules return a tiny score (1e-9) instead of raising; treat it as a failure.
+DEFAULT_TRAIN = _REPO_ROOT / "work" / "exploration" / "train.csv"
+DEFAULT_CHROMOSOME = _REPO_ROOT / "work" / "optimization" / "chromosome.yaml"
+DEFAULT_FITNESS = _REPO_ROOT / "work" / "optimization" / "fitness.py"
+# Scores at or below this are at the error/loss floor (fitness floors scores at 1e-9).
 ERROR_SCORE_CEILING = 1e-6
 
 
@@ -44,10 +46,12 @@ def sample_gene(spec: dict):
     kind = spec.get("type")
     if kind == "enum":
         return spec["values"][0]
-    if kind in ("int", "float"):
-        return spec["min_value"]
+    if kind == "int":
+        return int(round((spec["min_value"] + spec["max_value"]) / 2))
+    if kind == "float":
+        return (spec["min_value"] + spec["max_value"]) / 2
     if kind == "bool":
-        return False
+        return True
     if kind == "array":
         if (spec.get("item_definition") or {}).get("type") != "bool":
             raise ValueError("only bool arrays are supported by this check")
@@ -73,9 +77,14 @@ def sample_chromosomes(chromosome_yaml: Path) -> list[dict]:
     return samples
 
 
-def check(chromosome_yaml: Path, fitness_py: Path) -> bool:
-    """Return True when every sample chromosome scores finite and positive."""
-    print(f"Local check: {chromosome_yaml.name} + {fitness_py.name}", flush=True)
+def check(chromosome_yaml: Path, fitness_py: Path, train_csv: Path = DEFAULT_TRAIN,
+          assets: "list[Path] | None" = None) -> bool:
+    """Return True when every sample chromosome scores without error."""
+    print(f"Local check: {chromosome_yaml.name} + {fitness_py.name} on {train_csv.name}", flush=True)
+    for path in [chromosome_yaml, fitness_py, train_csv, *(assets or [])]:
+        if not Path(path).is_file():
+            print(f"  FAILED: missing {path}", flush=True)
+            return False
     try:
         samples = sample_chromosomes(chromosome_yaml)
         module = load_fitness_module(fitness_py)
@@ -85,8 +94,8 @@ def check(chromosome_yaml: Path, fitness_py: Path) -> bool:
 
     ok = True
     with tempfile.TemporaryDirectory(prefix="earth_local_check_") as tmp:
-        shutil.copy(TRAIN_CSV, Path(tmp) / TRAIN_CSV.name)
-        shutil.copy(TEST_IDS_CSV, Path(tmp) / TEST_IDS_CSV.name)
+        for path in [train_csv, *(assets or [])]:
+            shutil.copy(path, Path(tmp) / Path(path).name)
         try:
             fitness = module.FitnessClass(tmp)
         except Exception as exc:  # noqa: BLE001
@@ -95,30 +104,36 @@ def check(chromosome_yaml: Path, fitness_py: Path) -> bool:
         for sample in samples:
             label = sample.get("model_family", "sample")
             try:
+                started = time.perf_counter()
                 result = fitness.calculate_fitness(sample)
+                seconds = time.perf_counter() - started
                 score = float(result.score)
             except Exception as exc:  # noqa: BLE001
                 print(f"  {label}: FAILED: {exc}", flush=True)
                 ok = False
                 continue
-            if (result.scalars or {}).get("error") or score <= ERROR_SCORE_CEILING:
-                print(f"  {label}: FAILED: fitness returned its error score (see 'fitness error' above)", flush=True)
+            if (result.scalars or {}).get("error"):
+                print(f"  {label}: FAILED: fitness reported an error (see 'fitness error' above)", flush=True)
                 ok = False
-            elif not math.isfinite(score):
-                print(f"  {label}: FAILED: score {score!r} is not finite", flush=True)
+            elif not math.isfinite(score) or score <= 0:
+                print(f"  {label}: FAILED: score {score!r} must be finite and > 0", flush=True)
                 ok = False
+            elif score <= ERROR_SCORE_CEILING:
+                print(f"  {label}: score={score:.3g} (at the floor: this sample candidate scores at or below zero; fine if expected)", flush=True)
             else:
-                print(f"  {label}: score={score:.4f}", flush=True)
+                print(f"  {label}: score={score:.4f}  ({seconds:.1f} s for one fitness call)", flush=True)
     print("Local check OK." if ok else "Local check FAILED.", flush=True)
     return ok
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--chromosome", type=Path, default=_REPO_ROOT / "earth" / "chromosome.yaml")
-    parser.add_argument("--fitness", type=Path, default=_REPO_ROOT / "earth" / "fitness.py")
+    parser.add_argument("--chromosome", type=Path, default=DEFAULT_CHROMOSOME)
+    parser.add_argument("--fitness", type=Path, default=DEFAULT_FITNESS)
+    parser.add_argument("--train", type=Path, default=DEFAULT_TRAIN, help="Training CSV, as uploaded to Earth")
+    parser.add_argument("--assets", type=Path, nargs="*", default=[], help="Extra files uploaded with the training CSV")
     args = parser.parse_args()
-    return 0 if check(args.chromosome, args.fitness) else 1
+    return 0 if check(args.chromosome, args.fitness, args.train, args.assets) else 1
 
 
 if __name__ == "__main__":

@@ -2,15 +2,15 @@
 
 Run from repo root (requires .env with EARTH_USER / EARTH_PASS):
 
-    python earth/run_search.py                       # run1: the UI chromosome + fitness as is
-    python earth/run_search.py --name run2 --chromosome work/runs/run2/chromosome.yaml
-    python earth/run_search.py --name run3 --fitness work/runs/run3/fitness.py
+    python earth/run_search.py --name run1           # your chromosome + fitness under work/optimization/
+    python earth/run_search.py --name run2 --fitness work/runs/run2/fitness.py
     python earth/run_search.py --name run1 --no-wait  # launch and exit
     python earth/run_search.py --name run1 --collect  # later: poll and save the champion
 
-Steps: local pre-check of the chromosome + fitness, upload data/train_clean.csv +
-data/test_ids.csv, clone the template project, launch, poll until Earth stops,
-save the champion.
+Steps: local pre-check of the chromosome + fitness, upload the training CSV
+(default work/exploration/train.csv) plus any --assets, clone the template
+project, launch, poll until Earth stops, save the champion. Refuses to upload
+work/exploration/test.csv: the test set never goes to Earth.
 
 GA settings come from the ai1 block of the chromosome YAML, except population
 (--pop), time cap (--minutes), and compute (--units, --cpus), which are sized for
@@ -43,8 +43,10 @@ from earth_client import (  # noqa: E402
     upload_dataset,
 )
 
-TRAIN_CSV = _REPO_ROOT / "data" / "train_clean.csv"
-TEST_IDS_CSV = _REPO_ROOT / "data" / "test_ids.csv"
+DEFAULT_TRAIN = _REPO_ROOT / "work" / "exploration" / "train.csv"
+TEST_CSV = _REPO_ROOT / "work" / "exploration" / "test.csv"
+DEFAULT_CHROMOSOME = _REPO_ROOT / "work" / "optimization" / "chromosome.yaml"
+DEFAULT_FITNESS = _REPO_ROOT / "work" / "optimization" / "fitness.py"
 RUNS_DIR = _REPO_ROOT / "work" / "runs"
 POLL_SECONDS = 30
 FINAL_STATUSES = ("COMPLETED", "STAGNATED", "ERROR", "ABORTED")
@@ -177,8 +179,10 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--name", default="run1", help="Run label; output goes to work/runs/<name>/")
-    parser.add_argument("--chromosome", type=Path, default=_REPO_ROOT / "earth" / "chromosome.yaml")
-    parser.add_argument("--fitness", type=Path, default=_REPO_ROOT / "earth" / "fitness.py")
+    parser.add_argument("--chromosome", type=Path, default=DEFAULT_CHROMOSOME)
+    parser.add_argument("--fitness", type=Path, default=DEFAULT_FITNESS)
+    parser.add_argument("--train", type=Path, default=DEFAULT_TRAIN, help="Training CSV to upload")
+    parser.add_argument("--assets", type=Path, nargs="*", default=[], help="Extra files to upload with it")
     parser.add_argument("--minutes", type=int, default=15, help="Time cap for the run")
     parser.add_argument("--pop", type=int, default=10, help="GA population size")
     parser.add_argument("--units", type=int, default=5, help="Parallel fitness workers")
@@ -202,9 +206,13 @@ def main() -> int:
         session, headers = auth(password_only=True)
         return wait_and_save(session, headers, exp_id, run_dir)
 
-    for path in (TRAIN_CSV, TEST_IDS_CSV, args.chromosome, args.fitness):
+    for path in (args.train, *args.assets, args.chromosome, args.fitness):
         if not path.is_file():
             print(f"Missing {path}", flush=True)
+            return 1
+    for path in (args.train, *args.assets):
+        if path.resolve() == TEST_CSV.resolve() or path.name == TEST_CSV.name:
+            print(f"Refusing to upload {path}: the test set never goes to Earth.", flush=True)
             return 1
     if ids_path.is_file():
         print(
@@ -214,7 +222,7 @@ def main() -> int:
         )
         return 1
 
-    if not check_local(args.chromosome, args.fitness):
+    if not check_local(args.chromosome, args.fitness, args.train, args.assets):
         print("Fix the chromosome / fitness above before launching on Earth.", flush=True)
         return 1
 
@@ -230,16 +238,14 @@ def main() -> int:
         print(f"Login failed: {exc}", flush=True)
         return 1
 
-    name = f"s4-{args.name}-{int(time.time())}"
-    print(f"Uploading {TRAIN_CSV.name} as dataset '{name}'...", flush=True)
-    dataset_id = upload_dataset(session, headers, str(TRAIN_CSV), name)
-    test_ids_uploaded = upload_extra_asset(session, headers, dataset_id, TEST_IDS_CSV)
-    if not test_ids_uploaded:
-        print(
-            "Continuing without test_ids.csv: fitness keeps the 10 customers "
-            "shared with the test set.",
-            flush=True,
-        )
+    name = f"hw-{args.name}-{int(time.time())}"
+    print(f"Uploading {args.train.name} as dataset '{name}'...", flush=True)
+    dataset_id = upload_dataset(session, headers, str(args.train), name)
+    assets_uploaded = {}
+    for asset in args.assets:
+        assets_uploaded[asset.name] = upload_extra_asset(session, headers, dataset_id, asset)
+    if not all(assets_uploaded.values()):
+        print("WARNING: some extra assets did not upload; the fitness will not see them.", flush=True)
 
     print("Creating project...", flush=True)
     project_id = clone_template(session, headers, CHURN_TEMPLATE_ID, dataset_id, name)
@@ -265,7 +271,8 @@ def main() -> int:
         "dataset_id": dataset_id,
         "project_id": project_id,
         "experiment_id": exp_id,
-        "test_ids_uploaded": test_ids_uploaded,
+        "train": args.train.name,
+        "assets_uploaded": assets_uploaded,
         "chromosome": args.chromosome.name,
         "fitness": args.fitness.name,
         "settings": settings,
