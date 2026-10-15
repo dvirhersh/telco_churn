@@ -10,6 +10,9 @@ middle of every range, bools and bool arrays on), copies the training CSV (and a
 into a temporary folder the way Earth does, runs FitnessClass on it, and checks
 every score is finite and positive. Catches wrong array sizes, enum values the
 fitness does not know, and broken fitness code before you spend an Earth run.
+Then prints a rough run estimate from the slowest call. The fitness fits each
+model 4 times per fold (3 inner folds to pick the share to call, then the full
+training part), so one call takes 3-4 times longer than a single 5-fold CV.
 No Earth calls.
 """
 
@@ -32,6 +35,8 @@ DEFAULT_CHROMOSOME = _REPO_ROOT / "work" / "optimization" / "chromosome.yaml"
 DEFAULT_FITNESS = _REPO_ROOT / "work" / "optimization" / "fitness.py"
 # Scores at or below this are at the error/loss floor (fitness floors scores at 1e-9).
 ERROR_SCORE_CEILING = 1e-6
+# Class run settings (run_search.py defaults) and a typical length, for the run estimate.
+CLASS_POP, CLASS_UNITS, CLASS_MINUTES, TYPICAL_GENERATIONS = 10, 5, 15, 40
 
 
 def load_fitness_module(path: Path):
@@ -93,6 +98,7 @@ def check(chromosome_yaml: Path, fitness_py: Path, train_csv: Path = DEFAULT_TRA
         return False
 
     ok = True
+    slowest = 0.0
     with tempfile.TemporaryDirectory(prefix="earth_local_check_") as tmp:
         for path in [train_csv, *(assets or [])]:
             shutil.copy(path, Path(tmp) / Path(path).name)
@@ -122,6 +128,17 @@ def check(chromosome_yaml: Path, fitness_py: Path, train_csv: Path = DEFAULT_TRA
                 print(f"  {label}: score={score:.3g} (at the floor: this sample candidate scores at or below zero; fine if expected)", flush=True)
             else:
                 print(f"  {label}: score={score:.4f}  ({seconds:.1f} s for one fitness call)", flush=True)
+            slowest = max(slowest, seconds)
+    if ok and slowest > 0:
+        rounds = math.ceil(CLASS_POP / CLASS_UNITS)
+        minutes = TYPICAL_GENERATIONS * rounds * slowest / 60
+        print(
+            f"Run estimate: slowest call {slowest:.1f} s x {rounds} rounds per generation "
+            f"(population {CLASS_POP}, {CLASS_UNITS} workers) x {TYPICAL_GENERATIONS} generations "
+            f"= about {minutes:.0f} min on a laptop-speed worker (class cap {CLASS_MINUTES} min). "
+            "Sample genes sit mid-range; the largest models in your ranges are slower.",
+            flush=True,
+        )
     print("Local check OK." if ok else "Local check FAILED.", flush=True)
     return ok
 

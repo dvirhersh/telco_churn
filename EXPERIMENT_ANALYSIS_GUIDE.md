@@ -103,9 +103,10 @@ score flatters the champion.
 - **The share called:** the fitness picks it on each training fold. How much
   does it vary between folds, and how close is it to the share that would have
   been best on the validation fold?
-- **Calibration (the logistic-regression baseline):** the baseline calls
-  everyone above 14%. Among clients scored around 14%, do about 14% subscribe?
-  If not, its cut-off is in the wrong place.
+- **Calibration (stretch):** the break-even rule calls everyone above 14%.
+  Among clients the baseline scores around 14%, do about 14% subscribe? If
+  not, a fixed cut-off would be in the wrong place, which is one reason the
+  fitness picks a share on the training folds instead.
 
 *Write:* a profit table and one sentence on how robust the ranking is to the
 money assumptions.
@@ -123,8 +124,7 @@ all four policies (call everyone, the simple rule, the baseline, the champion)
   money on test?
 
 *Write:* the verdict (adopt the champion, or keep the baseline) and the answer
-to: *"If you ran a second optimization experiment, what would you let Earth
-evolve next, and why?"*
+to: *"What would you let Earth evolve in your next experiment, and why?"*
 
 ---
 

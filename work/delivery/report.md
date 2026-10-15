@@ -18,4 +18,4 @@
 
 ## Verdict against the success criterion
 
-## If you ran a second optimization experiment, what would you let Earth evolve next, and why?
+## What would you let Earth evolve in your next experiment, and why?

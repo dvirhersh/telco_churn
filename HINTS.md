@@ -39,7 +39,7 @@ numbers compare:
 
 ```python
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
 y = (train["y"] == "yes").astype(int).to_numpy()
 folds = list(StratifiedKFold(5, shuffle=True, random_state=42).split(train, y))
@@ -47,12 +47,29 @@ folds = list(StratifiedKFold(5, shuffle=True, random_state=42).split(train, y))
 def profit_per_1000(y_true, call):
     return (70 * y_true[call].sum() - 10 * call.sum()) * 1000 / len(y_true)
 
+def best_call_share(probability, y_true):
+    order = np.argsort(-probability, kind="stable")
+    profit_of_top_n = 70 * np.cumsum(y_true[order]) - 10 * np.arange(1, len(order) + 1)
+    best_n = int(np.argmax(profit_of_top_n)) + 1
+    return best_n / len(order) if profit_of_top_n[best_n - 1] > 0 else 0.0
+
+def call_top_share(probability, share):
+    call = np.zeros(len(probability), bool)
+    call[np.argsort(-probability, kind="stable")[:int(round(share * len(probability)))]] = True
+    return call
+
 # call everyone: call = np.ones(len(valid_idx), bool)
 # simple rule:   call = (train.iloc[valid_idx]["poutcome"] == "success").to_numpy()
-# logistic regression: fit on train_idx, call = probability >= 10 / 70
+# logistic regression, same rule as the fitness (lr = your sklearn Pipeline):
+#   inner = StratifiedKFold(3, shuffle=True, random_state=42)
+#   oof = cross_val_predict(lr, x.iloc[train_idx], y[train_idx], cv=inner, method="predict_proba")[:, 1]
+#   share = best_call_share(oof, y[train_idx])            # picked on the training part only
+#   lr.fit(x.iloc[train_idx], y[train_idx])
+#   call = call_top_share(lr.predict_proba(x.iloc[valid_idx])[:, 1], share)
+# stretch, break-even rule: call = lr.predict_proba(x.iloc[valid_idx])[:, 1] >= 10 / 70
 ```
 
-Report the mean and standard deviation over the folds.
+Report the mean and standard deviation over the folds, and the share called.
 
 ## Step 5 — a minimal chromosome to start from
 
@@ -110,6 +127,10 @@ def best_call_share(probability, y_true):
     return best_n / len(order) if profit_of_top_n[best_n - 1] > 0 else 0.0
 ```
 
+`call_list` in the skeleton is already written: it calls `best_call_share` on
+the training clients' out-of-fold scores and applies that share to the
+validation fold. It takes no genes.
+
 A score that is > 0, roughly between 0 and 1, where higher is better: divide
 each fold's profit by the profit of a perfect list on that fold (calling exactly
 the subscribers), average over folds, and floor at `ERROR_SCORE`:
@@ -146,6 +167,10 @@ from sklearn.model_selection import StratifiedKFold
 fc = F.FitnessClass("work/exploration")
 for seed in [1, 2, 3, 4, 5]:
     fc.folds = list(StratifiedKFold(F.CV_FOLDS, shuffle=True, random_state=seed).split(fc.x, fc.y))
+    fc.inner_folds = [  # the inner folds belong to the outer folds: rebuild them too
+        [(tr[a], tr[b]) for a, b in StratifiedKFold(F.INNER_FOLDS, shuffle=True, random_state=seed).split(tr, fc.y[tr])]
+        for tr, _ in fc.folds
+    ]
     print(seed, fc.calculate_fitness(champion_genes).scalars["profit_per_1000_mean"])
 ```
 
@@ -153,6 +178,10 @@ Do the same for the baseline genes and compare.
 
 ## Run size
 
-With population 10 and 5 workers, a generation is 2 rounds of fitness calls. If
-one call takes 3 seconds, a generation takes about 6–10 seconds, and 40
-generations about 5–7 minutes.
+With population 10 and 5 workers, a generation is 2 rounds of fitness calls,
+and each round waits for its slowest call. The inner folds make each call 3–4
+times slower than a plain 5-fold CV: on a laptop about 0.5 s for logistic
+regression, 2–3 s for XGBoost and 5–25 s for a random forest. If the slowest
+call in a round takes 10 seconds, a generation takes about 20 seconds, and 40
+generations about 13–15 minutes, right at the class cap. `check_local.py`
+prints this estimate for your own fitness.

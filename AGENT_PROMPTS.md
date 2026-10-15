@@ -39,8 +39,10 @@ Read what it does before you accept it.
 ## Step 4 — Baselines
 
 > Implement the three baselines from the README in work/baseline/, scored with
-> the protocol in work/design.md, on train.csv only. Report profit per 1,000
-> clients (mean and std over folds) and the share of clients called.
+> the protocol in work/design.md, on train.csv only. The logistic regression
+> must use the same call-list rule as the fitness (share picked on the
+> training part of each fold). Report profit per 1,000 clients (mean and std
+> over folds) and the share of clients called.
 
 ## Step 5 — Formulate
 

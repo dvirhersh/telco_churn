@@ -42,7 +42,7 @@ work/                         Your work (templates to fill in)
 You need Python 3.12 and your Earth login.
 
 ```bash
-git clone --branch hw --single-branch https://github.com/vasiliyk-gif/telco_churn.git earth_hw
+git clone --branch hw-v1 --single-branch https://github.com/vasiliyk-gif/telco_churn.git earth_hw
 cd earth_hw
 python3.12 -m venv .venv
 source .venv/bin/activate
@@ -112,8 +112,10 @@ Solution Design; [context/pathway.md](context/pathway.md).
 - the cross-validation scheme on `train.csv` (folds, seed);
 - how predicted probabilities become a **call list**. The fitness calls the
   top share of clients, and picks that share itself on the **training** part
-  of each fold (fit on 75% of it, choose the share that makes the most profit
-  on the other 25%). Why must the validation fold never decide how many to call?
+  of each fold: 3 inner folds give an out-of-fold score for every training
+  client, and the share that makes the most profit on those scores is called
+  from the top of the validation fold. Why must the validation fold never
+  decide how many to call?
 - how profit is computed on each fold, and how it becomes a score;
 - how you will check the champion on fresh folds before the test read.
 
@@ -129,8 +131,10 @@ Solution Design; [context/pathway.md](context/pathway.md).
 1. call everyone;
 2. a simple business rule: call every client whose previous campaign
    succeeded (`poutcome == "success"`);
-3. logistic regression, calling everyone whose predicted chance is above the
-   break-even (€10 / €70 ≈ 14%).
+3. logistic regression with the **same call-list rule as the fitness**: the
+   share to call picked on the training part of each fold (Step 3), then called
+   from the top of the validation fold. Earth's gain is then measured like for
+   like.
 
 **Deliver:** `work/baseline/` (code and metrics: profit per 1,000 clients,
 share of clients called).
@@ -139,12 +143,14 @@ share of clients called).
 baseline leave enough to gain to justify an Earth search? How much gain would
 convince you?
 
-**Stretch:** a calibration check of the logistic regression: among clients
-scored near 14%, do about 14% subscribe?
+**Stretch:** score the same logistic regression with the break-even rule
+instead (call everyone whose predicted chance is above €10 / €70 ≈ 14%), and
+compare its profit and share called with the fitness rule. Then check the
+calibration: among clients scored near 14%, do about 14% subscribe?
 
 ## Step 5 — Formulate the search
 
-**Read first:** [context/template/CHROMOSOME_PHILOSOPHY.md](context/template/CHROMOSOME_PHILOSOPHY.md)
+**Read first:** [context/template/CHROMOSOME_PHILOSOPHY.md](context/template/CHROMOSOME_PHILOSOPHY.md);
 [context/template/default_chromosome.yaml](context/template/default_chromosome.yaml) as a menu of gene ideas;
 [earth/context/CHROMOSOME_GUIDE.md](earth/context/CHROMOSOME_GUIDE.md) for YAML syntax.
 
@@ -187,9 +193,14 @@ python earth/check_local.py
 python earth/validate_chromosome.py work/optimization/chromosome.yaml
 ```
 
-The local check prints the time of one fitness call per model family. Estimate
-the run: generations × ⌈population ÷ workers⌉ × time per call (assume 30–50
-generations).
+The local check prints the time of one fitness call per model family and a
+run estimate: generations × ⌈population ÷ workers⌉ × time of the slowest call.
+The fitness fits each model 4 times per fold (3 inner folds to pick the share
+to call, then the full training part), so a call takes 3–4 times longer than a
+plain 5-fold CV: on a laptop about 0.5 s for logistic regression, 2–3 s for
+XGBoost and 5–25 s for a random forest, depending on its size. Keep the slow
+ranges (many trees, deep trees) in check, or the 15-minute cap will stop the
+run after a few dozen generations.
 
 **Deliver:** `work/optimization/fitness.py`, `work/optimization/chromosome.yaml`,
 the run estimate in `work/optimization/formulation.md`.
@@ -266,8 +277,8 @@ share of clients called.
 **Deliver:** `work/delivery/report.md`, complete.
 
 **Done when:** the report has the profit table on the test set, your verdict
-against the success criterion from Step 1, and your answer to: *If you ran a
-second optimization experiment, what would you let Earth evolve next, and why?*
+against the success criterion from Step 1, and your answer to: *What would
+you let Earth evolve in your next experiment, and why?*
 
 ## Troubleshooting
 
