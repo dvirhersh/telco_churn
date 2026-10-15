@@ -78,7 +78,9 @@ Read what it does before you accept it.
 
 ## Step 9 — Test read
 
-> Write work/delivery/test_read.py: fit the baseline and my champion on all of
-> train.csv, then score all four policies once on test.csv (profit per 1,000,
-> share called). Run it once.
+> Write work/delivery/test_read.py. For the baseline and my champion: pick the
+> share to call from 3-fold out-of-fold scores on all of train.csv (same rule as
+> the fitness), fit on all of train.csv, and call that share of test.csv. Then
+> score all four policies once on test.csv (profit per 1,000, share called).
+> Run it once.
 > Then help me draft work/delivery/report.md from my notes; I'll write the verdict.

@@ -197,7 +197,7 @@ The local check prints the time of one fitness call per model family and a
 run estimate: generations × ⌈population ÷ workers⌉ × time of the slowest call.
 The fitness fits each model 4 times per fold (3 inner folds to pick the share
 to call, then the full training part), so a call takes 3–4 times longer than a
-plain 5-fold CV: on a laptop about 0.5 s for logistic regression, 2–3 s for
+plain 5-fold CV: on a laptop about 1 s for logistic regression, 2–4 s for
 XGBoost and 5–25 s for a random forest, depending on its size. Keep the slow
 ranges (many trees, deep trees) in check, or the 15-minute cap will stop the
 run after a few dozen generations.
@@ -269,8 +269,11 @@ score per generation, gene shifts, and the top 5. Then work through questions
 **Read first:** [EXPERIMENT_ANALYSIS_GUIDE.md](EXPERIMENT_ANALYSIS_GUIDE.md),
 question 6; [context/pathway.md](context/pathway.md), rule 1.
 
-**Do:** fit the logistic-regression baseline and your champion on all of
-`train.csv`. Then score all four policies (call everyone, the simple rule, the
+**Do:** for the logistic-regression baseline and your champion, pick the share
+to call the same way the fitness does, now on all of `train.csv`: 3-fold
+out-of-fold scores on `train.csv`, then the share that makes the most profit on
+them. Fit each model on all of `train.csv` and call that share from the top of
+`test.csv`. Then score all four policies (call everyone, the simple rule, the
 baseline, the champion) **once** on `test.csv`: profit per 1,000 clients and
 share of clients called.
 

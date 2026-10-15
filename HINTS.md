@@ -180,8 +180,8 @@ Do the same for the baseline genes and compare.
 
 With population 10 and 5 workers, a generation is 2 rounds of fitness calls,
 and each round waits for its slowest call. The inner folds make each call 3–4
-times slower than a plain 5-fold CV: on a laptop about 0.5 s for logistic
-regression, 2–3 s for XGBoost and 5–25 s for a random forest. If the slowest
+times slower than a plain 5-fold CV: on a laptop about 1 s for logistic
+regression, 2–4 s for XGBoost and 5–25 s for a random forest. If the slowest
 call in a round takes 10 seconds, a generation takes about 20 seconds, and 40
 generations about 13–15 minutes, right at the class cap. `check_local.py`
 prints this estimate for your own fitness.

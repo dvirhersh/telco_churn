@@ -22,3 +22,7 @@ predate this project; read them with these caveats.
    (`{username, password}`, login name often without `@domain`) and uses the
    returned **access_token**, which carries the `org_id` sent as `x-jwt-org-id`.
    The old Keycloak `/realms/earth/...` token endpoint no longer works.
+
+5. **Scalars may hold one per-fold dict.** `FITNESS_DEVELOPMENT.md` says scalars
+   must be flat. One level of nesting (`profit_per_1000_per_fold`, as in the
+   skeleton) works on Earth, and `compare_runs.py` reads it; avoid deeper nesting.

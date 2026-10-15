@@ -5,6 +5,7 @@
 > the one methodology you need is [TABULAR_EDA_AND_SPLIT_GUIDELINES.md](TABULAR_EDA_AND_SPLIT_GUIDELINES.md).
 > The homework steps are in the [README](../../README.md); the homework pathway is
 > [context/pathway.md](../pathway.md).
+
 **Part of:** the org's DS Delivery Operating System v4.0 (Tier 2 — Practices).
 
 ## Purpose

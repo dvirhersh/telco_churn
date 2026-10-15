@@ -40,7 +40,7 @@ Look at best and mean fitness per generation.
   candidates your fitness could not score (a gene combination it cannot
   handle): fix them. *Floor* scores are candidates that lose money if your score
   floors losses at 1e-9: expected now and then, but if many candidates sit at
-  the floor, the search space contains a lot of money-losing policies.
+  the floor, the search space contains a lot of money-losing candidates.
 
 *Write:* one sentence on convergence and the stop reason, with the plot.
 
@@ -113,9 +113,11 @@ money assumptions.
 
 ## 6. One test read, then the verdict
 
-Only now: fit the baseline and the champion on all of `train.csv`, then score
-all four policies (call everyone, the simple rule, the baseline, the champion)
-**once** on `test.csv`.
+Only now: for the baseline and the champion, pick the share to call on all of
+`train.csv` (3-fold out-of-fold scores, as in the fitness), fit on all of
+`train.csv`, and call that share of `test.csv`. Then score all four policies
+(call everyone, the simple rule, the baseline, the champion) **once** on
+`test.csv`.
 
 - Search score, fresh-seed score, and test profit are three different numbers.
   Explain the differences.
