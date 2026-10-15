@@ -69,8 +69,10 @@ target, the unit of analysis, the money, and what success means.
 
 **Deliver:** `work/framing.md`.
 
-**Done when:** success is written as numbers. For example: the champion's
-profit on the test set beats both calling everyone and the simple rule.
+**Done when:** success is written as numbers. For example: on the test set the
+champion makes more profit than calling everyone and the simple rule, and at
+least €X per 1,000 clients more than the logistic-regression baseline (you pick
+X and say why).
 
 ## Step 2 — Explore and freeze the split
 
@@ -254,8 +256,10 @@ score per generation, gene shifts, and the top 5. Then work through questions
 **Read first:** [EXPERIMENT_ANALYSIS_GUIDE.md](EXPERIMENT_ANALYSIS_GUIDE.md),
 question 6; [context/pathway.md](context/pathway.md), rule 1.
 
-**Do:** fit call-everyone, the simple rule, the logistic-regression baseline,
-and your champion on all of `train.csv`, and score each **once** on `test.csv`.
+**Do:** fit the logistic-regression baseline and your champion on all of
+`train.csv`. Then score all four policies (call everyone, the simple rule, the
+baseline, the champion) **once** on `test.csv`: profit per 1,000 clients and
+share of clients called.
 
 **Deliver:** `work/delivery/report.md`, complete.
 

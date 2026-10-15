@@ -109,8 +109,9 @@ money assumptions.
 
 ## 6. One test read, then the verdict
 
-Only now: fit call-everyone, the simple rule, the baseline, and the champion on
-all of `train.csv` and score each **once** on `test.csv`.
+Only now: fit the baseline and the champion on all of `train.csv`, then score
+all four policies (call everyone, the simple rule, the baseline, the champion)
+**once** on `test.csv`.
 
 - Search score, fresh-seed score, and test profit are three different numbers.
   Explain the differences.
