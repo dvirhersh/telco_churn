@@ -3,13 +3,13 @@
 ## Cross-validation scheme (folds, seed)
 
 
-## From probabilities to a call list (policy)
+## From probabilities to a call list (how the share to call is picked on the training folds)
 
 
 ## Profit per fold and the score
 
 
-## What if the probabilities are miscalibrated?
+## Why the validation fold must not decide how many to call
 
 
 ## Fresh-fold check before the test read

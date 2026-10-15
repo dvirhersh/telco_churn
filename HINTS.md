@@ -90,13 +90,6 @@ chromosome:
       mutation: {step_size: 1, max_step_size: 2, percentage_change: 0, max_magnitude: 0, drift_factor: 1.1}
       crossover: {type: range_uniform}
     use_economy: {type: bool}
-    threshold:
-      type: float
-      min_value: 0.05
-      max_value: 0.6
-      generation: {type: uniform}
-      mutation: {step_size: 0.02, max_step_size: 0.05, percentage_change: 0, max_magnitude: 0, drift_factor: 1.1}
-      crossover: {type: range_uniform}
 ```
 
 Keep the `fitness_function` line at the top. `run_search.py` adds the GA
@@ -110,9 +103,11 @@ def campaign_profit(y_true, call):
     return VALUE_PER_SUBSCRIPTION * float(y_true[call].sum()) - COST_PER_CALL * float(call.sum())
 
 
-def call_list(probability, genes):
-    # policy: call everyone above the cut-off Earth chose
-    return probability >= float(genes["threshold"])
+def best_call_share(probability, y_true):
+    order = np.argsort(-probability, kind="stable")
+    profit_of_top_n = VALUE_PER_SUBSCRIPTION * np.cumsum(y_true[order]) - COST_PER_CALL * np.arange(1, len(order) + 1)
+    best_n = int(np.argmax(profit_of_top_n)) + 1
+    return best_n / len(order) if profit_of_top_n[best_n - 1] > 0 else 0.0
 ```
 
 A score that is > 0, roughly between 0 and 1, where higher is better: divide
@@ -120,10 +115,13 @@ each fold's profit by the profit of a perfect list on that fold (calling exactly
 the subscribers), average over folds, and floor at `ERROR_SCORE`:
 
 ```python
+# inside the fold loop of _score, after `call = ...`
+y_valid = self.y[valid_idx]
 perfect = (VALUE_PER_SUBSCRIPTION - COST_PER_CALL) * float(y_valid.sum())
-ratios.append(profit / perfect)
+ratios.append(campaign_profit(y_valid, call) / perfect)   # start with ratios = [] before the loop
 ...
-score = max(float(np.mean(ratios)), ERROR_SCORE)
+# after the loop
+score = float(np.mean(ratios))      # the return line already floors it at ERROR_SCORE
 ```
 
 A candidate that loses money then scores the floor. Write in `design.md` why

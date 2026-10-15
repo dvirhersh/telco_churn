@@ -110,9 +110,10 @@ Solution Design; [context/pathway.md](context/pathway.md).
 
 **Do:** before training any model, write how a model will be scored:
 - the cross-validation scheme on `train.csv` (folds, seed);
-- how predicted probabilities become a **call list** (a probability cut-off?
-  the top share of clients?), and what happens to that rule if the
-  probabilities are off;
+- how predicted probabilities become a **call list**. The fitness calls the
+  top share of clients, and picks that share itself on the **training** part
+  of each fold (fit on 75% of it, choose the share that makes the most profit
+  on the other 25%). Why must the validation fold never decide how many to call?
 - how profit is computed on each fold, and how it becomes a score;
 - how you will check the champion on fresh folds before the test read.
 
@@ -144,15 +145,16 @@ scored near 14%, do about 14% subscribe?
 ## Step 5 — Formulate the search
 
 **Read first:** [context/template/CHROMOSOME_PHILOSOPHY.md](context/template/CHROMOSOME_PHILOSOPHY.md)
-(including the note on policy genes);
 [context/template/default_chromosome.yaml](context/template/default_chromosome.yaml) as a menu of gene ideas;
 [earth/context/CHROMOSOME_GUIDE.md](earth/context/CHROMOSOME_GUIDE.md) for YAML syntax.
 
 **Do:** decide what Earth may change and what stays fixed.
 - Candidates for genes: model family and hyperparameters; class weight;
   feature groups (for example, a gene that switches the economic columns on or
-  off); handling of `pdays = 999`; the calling policy and its parameter.
-- Fixed: the money, the folds and seed, the feature boundary from Step 2.
+  off); handling of `pdays = 999`.
+- Fixed: the money, the folds and seed, the feature boundary from Step 2, and
+  how the share to call is picked (inside the fitness, on the training folds).
+  How many clients to call is not a gene.
 
 **Deliver:** `work/optimization/formulation.md`: every gene with a reason, and
 the fixed list.

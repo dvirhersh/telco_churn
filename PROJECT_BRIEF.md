@@ -38,7 +38,7 @@ Campaign profit = €70 × (subscriptions among the clients we call) − €10 �
 ## Goal
 
 Build a model that ranks clients by how likely they are to subscribe, and a
-calling policy that turns that ranking into a call list, so the campaign makes
+rule that turns that ranking into a call list, so the campaign makes
 as much profit as possible. Compare it with two references: calling everyone,
 and a simple business rule.
 
@@ -74,9 +74,10 @@ These are your decisions; write each one down with a reason.
    "how will this work next campaign"?
 4. **Messy values.** `unknown` in several columns, and `pdays = 999`. What do
    they mean, and how will you treat them?
-5. **Metric.** How will you turn predicted probabilities into a call list and a
-   profit number? Fixed number of calls, or call everyone above the break-even
-   chance? What happens to that rule if the model's probabilities are off?
+5. **Metric.** The model ranks clients; the call list is the top share of the
+   ranking. The fitness picks that share on the training folds and reports the
+   profit on the validation folds. Why not pick the share on the validation
+   folds? And why is profit a better score here than F1 or AUC?
 6. **Success.** Your model's profit must beat both references (call everyone,
    simple rule) on the test set, scored once. How much better than the
    logistic-regression baseline would make the Earth search worth it?

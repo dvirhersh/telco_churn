@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from pydantic import BaseModel
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 
 # ---- CONTRACT: your framing decisions, fixed for every chromosome ---------------------------
 TRAIN_ASSET = "train.csv"           # the file run_search.py uploads (work/exploration/train.csv)
@@ -26,6 +26,7 @@ COST_PER_CALL = 10.0                # from PROJECT_BRIEF.md; never a gene
 VALUE_PER_SUBSCRIPTION = 70.0       # from PROJECT_BRIEF.md; never a gene
 SEED = 42
 CV_FOLDS = 5
+PICK_SIZE = 0.25                    # part of each training fold used to pick the share to call
 ERROR_SCORE = 1e-9                  # Earth needs a finite score > 0
 
 # TODO (Step 5): your feature boundary. Which columns may the model use?
@@ -52,13 +53,22 @@ def campaign_profit(y_true: np.ndarray, call: np.ndarray) -> float:
     raise NotImplementedError
 
 
-def call_list(probability: np.ndarray, genes: dict) -> np.ndarray:
-    """Turn predicted probabilities into a call list (array of True/False).
+def call_top_share(probability: np.ndarray, share: float) -> np.ndarray:
+    """Call the top `share` of clients by predicted probability (array of True/False)."""
+    n = int(round(share * len(probability)))
+    call = np.zeros(len(probability), dtype=bool)
+    call[np.argsort(-probability, kind="stable")[:n]] = True
+    return call
 
-    TODO (Step 6): implement the calling policy you wrote in work/design.md,
-    for example "call everyone above a probability cut-off" or "call the top
-    share of the list". If the policy has a parameter Earth may tune, read it
-    from genes.
+
+def best_call_share(probability: np.ndarray, y_true: np.ndarray) -> float:
+    """The share of clients to call that makes the most profit on these clients.
+
+    Called only with clients from the training part of a fold, never the
+    validation fold.
+    TODO (Step 6): rank the clients by probability, compute the profit of calling
+    the top 1, top 2, ... clients, and return the best number as a share of
+    len(probability). If no list makes a profit, return 0.0.
     """
     raise NotImplementedError
 
@@ -84,6 +94,11 @@ class FitnessClass:
         self.y = (self.x[TARGET] == POSITIVE_CLASS).astype(int).to_numpy()
         # Folds are fixed once: every chromosome is scored on the same splits.
         self.folds = list(StratifiedKFold(CV_FOLDS, shuffle=True, random_state=SEED).split(self.x, self.y))
+        # Inside each training part: (1 - PICK_SIZE) to fit, PICK_SIZE to pick the share to call.
+        self.picks = [
+            train_test_split(train_idx, test_size=PICK_SIZE, stratify=self.y[train_idx], random_state=SEED)
+            for train_idx, _ in self.folds
+        ]
 
     def calculate_fitness(self, chromosome: dict) -> FitnessCalculationResult:
         try:
@@ -93,13 +108,19 @@ class FitnessClass:
             return FitnessCalculationResult(score=ERROR_SCORE, scalars={"error": 1})
 
     def _score(self, genes: dict) -> FitnessCalculationResult:
-        fold_profits = []
-        for train_idx, valid_idx in self.folds:
+        fold_profits, shares = [], []
+        for (train_idx, valid_idx), (fit_idx, pick_idx) in zip(self.folds, self.picks):
+            # 1. Pick how many to call, using the training part only.
+            pipe, cols = build_pipeline(genes, self.y[fit_idx])
+            pipe.fit(self.x.iloc[fit_idx][cols], self.y[fit_idx])
+            share = best_call_share(pipe.predict_proba(self.x.iloc[pick_idx][cols])[:, 1], self.y[pick_idx])
+            # 2. Refit on the whole training part, call that share of the validation fold.
             pipe, cols = build_pipeline(genes, self.y[train_idx])
             pipe.fit(self.x.iloc[train_idx][cols], self.y[train_idx])
             probability = pipe.predict_proba(self.x.iloc[valid_idx][cols])[:, 1]
-            call = call_list(probability, genes)
+            call = call_top_share(probability, share)
             fold_profits.append(campaign_profit(self.y[valid_idx], call) * 1000 / len(valid_idx))
+            shares.append(share)
 
         # TODO (Step 6): turn profit into a score that is > 0 and where higher is
         # better. Profit can be negative, so you need a decision here; write it in
@@ -111,7 +132,8 @@ class FitnessClass:
                 "profit_per_1000_mean": float(np.mean(fold_profits)),
                 "profit_per_1000_std": float(np.std(fold_profits)),
                 "profit_per_1000_per_fold": {f"fold_{i}": float(p) for i, p in enumerate(fold_profits)},
-                # TODO (stretch): share of clients called, precision of the call list.
+                "share_called": float(np.mean(shares)),
+                # TODO (stretch): precision of the call list.
             },
         )
 

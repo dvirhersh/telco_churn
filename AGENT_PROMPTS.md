@@ -32,8 +32,9 @@ Read what it does before you accept it.
 
 ## Step 3 — Design
 
-> Here is my evaluation design: <paste>. Point out anything ambiguous, and what
-> could go wrong if the model's probabilities are miscalibrated.
+> Here is my evaluation design: <paste>. Point out anything ambiguous, and
+> anything that lets the validation fold leak into the score (for example into
+> how many clients are called).
 
 ## Step 4 — Baselines
 

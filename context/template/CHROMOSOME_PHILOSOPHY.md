@@ -1,12 +1,5 @@
 > **Source:** the Earth binary-classifier template. Read "template" as "your
 > `fitness.py`". It is a checklist for Step 5 (Formulate).
->
-> **Note for this homework: policy genes are allowed.** The section below says a
-> chromosome must not contain business thresholds or cost multipliers. In this
-> homework the money (€10 per call, €70 per subscription) stays fixed in
-> `fitness.py` and is never a gene. Genes that decide *how the call list is built*
-> (a probability cut-off, or the share of clients to call) are decision variables
-> Earth may tune, not business constants, so they may be genes.
 
 # Chromosome Philosophy – Binary Classifier Template
 

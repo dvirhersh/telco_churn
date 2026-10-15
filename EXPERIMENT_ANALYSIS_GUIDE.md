@@ -50,12 +50,12 @@ Take the final generation's population and rank it by score.
 
 - How far is the champion from number 2, 5, and 10? If ten candidates are within
   one fold-standard-deviation of the champion, they are a tie.
-- Do the near-ties share a model family, a feature group, a calling policy?
+- Do the near-ties share a model family, a feature group, a class weight?
   What they share is what the search actually learned; where they differ did
   not matter.
 - Per-fold scores: does the champion win on every fold, or on one lucky fold?
 
-*Write:* the top 5 as a table (score, std, family, policy, feature groups), and
+*Write:* the top 5 as a table (score, std, family, share called, feature groups), and
 which choices they agree on.
 
 ## 3. Which decisions mattered?
@@ -73,7 +73,7 @@ generations), or compute them from `history.csv`.
 - A gene that stayed spread out did not matter, or the run was too short to
   tell.
 - Check one thing by hand: re-score the champion locally with one gene flipped
-  (e.g. economy off, policy threshold at break-even). How much profit moves?
+  (e.g. economy off, or `pdays` handling switched). How much profit moves?
 
 *Write:* the 2–3 genes that mattered most, with the one-flip check.
 
@@ -100,9 +100,12 @@ score flatters the champion.
 - **Sensitivity:** recompute profit at €8 and €12 per call, and €50 and €90 per
   subscription. Does the champion still beat the baseline? Does the best number
   of calls move?
-- **Calibration (threshold policies only):** among clients scored around 14%,
-  do about 14% subscribe? If not, a probability threshold puts the cut-off in the
-  wrong place.
+- **The share called:** the fitness picks it on each training fold. How much
+  does it vary between folds, and how close is it to the share that would have
+  been best on the validation fold?
+- **Calibration (the logistic-regression baseline):** the baseline calls
+  everyone above 14%. Among clients scored around 14%, do about 14% subscribe?
+  If not, its cut-off is in the wrong place.
 
 *Write:* a profit table and one sentence on how robust the ranking is to the
 money assumptions.
