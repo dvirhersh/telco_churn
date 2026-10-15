@@ -12,8 +12,8 @@ until Earth has no more, and writes into the run folder:
                   (crossover / mutation / elite), parents, every gene, every scalar
     history.json  the raw API responses
 
-Then prints: best and mean score per generation, how many candidates got the
-error score, how the main genes were distributed in the first vs last
+Then prints: best and mean score per generation, how many candidates failed
+(fitness error) or scored at the floor (e.g. a candidate that loses money), how the main genes were distributed in the first vs last
 generations, and the top 5 distinct candidates of the whole run.
 Read-only: it never changes anything on Earth.
 """
@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 import pandas as pd
@@ -34,12 +35,26 @@ from earth_client import BASE, auth  # noqa: E402
 
 ERROR_SCORE_CEILING = 1e-6
 MAX_GENERATIONS = 1000
+PAUSE_SECONDS = 0.5
+
+
+def get_population(session, headers, exp_id: str, gen: int):
+    """One generation, with polite pacing and retries when Earth rate-limits (HTTP 429)."""
+    for attempt in range(6):
+        resp = session.get(f"{BASE}/api/experiments/{exp_id}/{gen}/population", headers=headers, timeout=60)
+        if resp.status_code != 429:
+            return resp
+        wait = float(resp.headers.get("Retry-After") or 2 ** (attempt + 1))
+        print(f"  rate-limited by Earth; waiting {wait:.0f} s...", flush=True)
+        time.sleep(wait)
+    return resp
 
 
 def fetch(session, headers, exp_id: str) -> list[dict]:
     pages = []
     for gen in range(MAX_GENERATIONS):
-        resp = session.get(f"{BASE}/api/experiments/{exp_id}/{gen}/population", headers=headers, timeout=60)
+        resp = get_population(session, headers, exp_id, gen)
+        time.sleep(PAUSE_SECONDS)
         if resp.status_code == 404:
             break
         resp.raise_for_status()
@@ -82,7 +97,10 @@ def flatten(pages: list[dict]) -> pd.DataFrame:
 def summarise(df: pd.DataFrame) -> None:
     pd.set_option("display.width", 200)
     per_gen = df.groupby("generation").score.agg(best="max", mean="mean", worst="min", n="size")
-    per_gen["errors"] = df.assign(err=df.score <= ERROR_SCORE_CEILING).groupby("generation").err.sum()
+    err = df["scalar.error"].fillna(0).astype(bool) if "scalar.error" in df else pd.Series(False, index=df.index)
+    floor = (df.score <= ERROR_SCORE_CEILING) & ~err
+    per_gen["errors"] = err.groupby(df.generation).sum()
+    per_gen["at_floor"] = floor.groupby(df.generation).sum()
     print("\n1) Score per generation")
     print(per_gen.round(4).to_string())
 

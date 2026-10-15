@@ -36,8 +36,11 @@ Look at best and mean fitness per generation.
 - **Gap between best and mean:** a population that is mostly far below the best
   is still exploring; a population that has collapsed onto the best has lost
   diversity (drift helps here).
-- **Error scores:** how many candidates got the error score (1e-9)? Many errors
-  mean a gene combination your fitness cannot handle.
+- **Errors and floor scores:** `fetch_history.py` counts both. *Errors* are
+  candidates your fitness could not score (a gene combination it cannot
+  handle): fix them. *Floor* scores are candidates that lose money if your score
+  floors losses at 1e-9: expected now and then, but if many candidates sit at
+  the floor, the search space contains a lot of money-losing policies.
 
 *Write:* one sentence on convergence and the stop reason, with the plot.
 

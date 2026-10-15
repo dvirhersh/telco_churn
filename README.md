@@ -183,8 +183,9 @@ python earth/check_local.py
 python earth/validate_chromosome.py work/optimization/chromosome.yaml
 ```
 
-Time one fitness call (the local check prints a score per model family; time
-it) and estimate the run: generations × ⌈population ÷ workers⌉ × time per call.
+The local check prints the time of one fitness call per model family. Estimate
+the run: generations × ⌈population ÷ workers⌉ × time per call (assume 30–50
+generations).
 
 **Deliver:** `work/optimization/fitness.py`, `work/optimization/chromosome.yaml`,
 the run estimate in `work/optimization/formulation.md`.
