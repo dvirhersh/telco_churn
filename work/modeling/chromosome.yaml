@@ -1,0 +1,101 @@
+# Workshop 1 reduced chromosome: logistic regression only.
+# Reduced from context/template_churn/chromosome/default_chromosome.yaml.
+# Everything not listed here stays fixed (see work/modeling/formulation.md).
+# GA settings (population, stagnation, ...) are supplied by earth_client at launch.
+
+chromosome:
+  type: dict
+  generation:
+    type: per_item
+    non_required_probability: 0
+  mutation:
+    type: random
+    percentage_to_mutate: 0.2
+    max_percentage_to_mutate: 0.4
+    num_items_to_mutate: 1
+    max_num_items_to_mutate: 2
+    drift_factor: 1.1
+  crossover:
+    type: per_item_crossover
+    per_item_select_strategy: random
+  content:
+
+    # Numeric scaling applied to all numeric columns (after median imputation).
+    # Baseline uses standard.
+    scaling_method:
+      type: enum
+      values:
+        - none
+        - standard
+        - minmax
+        - robust
+      generation:
+        type: uniform
+      mutation:
+        type: random
+      crossover:
+        type: error
+
+    # Class imbalance handling (~26.5% positive). Baseline uses none.
+    imbalance_method:
+      type: enum
+      values:
+        - none
+        - class_weight_balanced
+      generation:
+        type: uniform
+      mutation:
+        type: random
+      crossover:
+        type: error
+
+    logistic_regression:
+      type: dict
+      generation:
+        type: per_item
+        non_required_probability: 0
+      mutation:
+        type: random
+        percentage_to_mutate: 0.3
+      crossover:
+        type: per_item_crossover
+      content:
+
+        # Regularisation strength on a log scale: C = 10 ** log10_C.
+        # Range covers C in [0.001, 100]; baseline C = 1.0 (log10_C = 0).
+        log10_C:
+          type: float
+          min_value: -3.0
+          max_value: 2.0
+          generation:
+            type: uniform
+          mutation:
+            percentage_change: 0.2
+          crossover:
+            type: random
+
+        # Valid (penalty, solver) pairs only. Baseline uses l2_lbfgs.
+        penalty_solver:
+          type: enum
+          values:
+            - l2_lbfgs
+            - l1_liblinear
+            - elasticnet_saga
+          generation:
+            type: uniform
+          mutation:
+            type: random
+          crossover:
+            type: error
+
+        # Used only when penalty_solver == elasticnet_saga; ignored otherwise.
+        l1_ratio:
+          type: float
+          min_value: 0.0
+          max_value: 1.0
+          generation:
+            type: uniform
+          mutation:
+            percentage_change: 0.2
+          crossover:
+            type: random
