@@ -1,0 +1,40 @@
+{
+  "protocol": "refit on all of train.csv (5634 rows), score once on holdout.csv, threshold 0.5",
+  "holdout_rows": 1409,
+  "experiment_id": "195f2e1d3de244f29d2ef20146f3ae3f",
+  "champion_settings": {
+    "scaling_method": "standard",
+    "imbalance_method": "none",
+    "log10_C": -0.862334075207789,
+    "penalty_solver": "elasticnet_saga",
+    "l1_ratio": 0.4863991102108255
+  },
+  "champion_validation_f1": 0.6992,
+  "baseline_validation_f1": 0.6887,
+  "holdout": {
+    "baseline": {
+      "f1": 0.7003,
+      "precision": 0.7353,
+      "recall": 0.6684,
+      "confusion_matrix": {
+        "tn": 945,
+        "fp": 90,
+        "fn": 124,
+        "tp": 250
+      }
+    },
+    "champion": {
+      "f1": 0.6854,
+      "precision": 0.7219,
+      "recall": 0.6524,
+      "confusion_matrix": {
+        "tn": 941,
+        "fp": 94,
+        "fn": 130,
+        "tp": 244
+      }
+    }
+  },
+  "holdout_f1_delta_champion_minus_baseline": -0.0149,
+  "prefer_champion": false
+}
