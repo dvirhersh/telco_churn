@@ -1,0 +1,14 @@
+Uploaded dataset 'telco-churn-w1-20261016-1158' → id=4c24e13b-1b19-41d2-97a8-c34a0bce1621
+Created project 'telco-churn-w1-20261016-1158' → id=61db1494b8fe42a78980a4ea9c4eb9a6
+Experiment started → id=195f2e1d3de244f29d2ef20146f3ae3f
+Saved ids to work/optimization/earth_run.json
+  2026-10-16T11:58:40 [INITIALIZING] gen=0 best F1=None
+  2026-10-16T12:03:42 [RUNNING] gen=3 best F1=0.6991596638655462
+  2026-10-16T12:04:42 [RUNNING] gen=9 best F1=0.6991596638655462
+  2026-10-16T12:05:42 [RUNNING] gen=16 best F1=0.6991596638655462
+  2026-10-16T12:06:43 [RUNNING] gen=21 best F1=0.6991596638655462
+  2026-10-16T12:07:43 [RUNNING] gen=27 best F1=0.6991596638655462
+  2026-10-16T12:08:43 [COMPLETED] gen=30 best F1=0.6991596638655462
+
+Final status: COMPLETED
+Champion (validation F1 0.6991596638655462) saved to work/optimization/champion.json

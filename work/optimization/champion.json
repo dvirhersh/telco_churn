@@ -1,0 +1,26 @@
+{
+  "experiment_id": "195f2e1d3de244f29d2ef20146f3ae3f",
+  "status": "COMPLETED",
+  "generation": 30,
+  "fitness_f1_validation": 0.6991596638655462,
+  "scalars": {
+    "f1": 0.6991596638655462,
+    "precision": 0.7027027027027027,
+    "recall": 0.6956521739130435,
+    "C": 0.1372985418067708,
+    "tn": 740,
+    "fp": 88,
+    "fn": 91,
+    "tp": 208
+  },
+  "chromosome": {
+    "scaling_method": "standard",
+    "imbalance_method": "none",
+    "logistic_regression": {
+      "log10_C": -0.862334075207789,
+      "penalty_solver": "elasticnet_saga",
+      "l1_ratio": 0.4863991102108255
+    }
+  },
+  "saved_at": "2026-10-16T12:08:43"
+}
