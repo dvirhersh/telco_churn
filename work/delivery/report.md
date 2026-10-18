@@ -1,14 +1,33 @@
 # Report — Term-deposit campaign
 
 ## Framing (short)
+**Question:** which clients should the bank call in the next term-deposit campaign to make the most profit, and how much more is that than calling everyone or calling only clients whose previous campaign succeeded? **Decision:** before the campaign, each client is called or not; a model ranks clients and the call list is the top share of the ranking. **Target:** `y == "yes"` (~11.3% of contacts). **Money:** €10 per call, €70 per subscription, so a call pays off only above 10/70 = 14.3%; calling everyone loses money. **Success, on the test set, scored once:** more profit per 1,000 clients than calling everyone and than the `poutcome == "success"` rule, and at least **€300 per 1,000** more than the logistic-regression baseline (about 5 extra subscribers per 1,000; smaller gains are within the noise of ~225 test subscribers). Full text: `work/framing.md`.
 
 ## Data and split (feature boundary, split decision, what you found over time)
+`data/bank_10k.csv`: 10,000 contacts, 21 columns + `y`, no missing values; `unknown` is the dataset's missing value and carries signal, so it stays a category. `pdays = 999` (96.6% of rows) is a code, not a number of days.
+
+**Feature boundary** (only what is known before the campaign starts): in: `age`, `job`, `marital`, `education`, `default`, `housing`, `loan`, `previous`, `poutcome`, `contact` (+ a `pdays != 999` flag as a gene). Out: `duration` (target leakage: known only after the call), `campaign` (counts calls in this campaign), `month` / `day_of_week` (set during the campaign; when to call is out of scope), `pdays` as a number, the five economic columns and `contact_order` (they encode the period, not the client). With a plain LR, adding the economic columns raises 5-fold ROC-AUC from 0.713 to 0.785 and `contact_order` to 0.781: that gain comes from recognising the period, not the client.
+
+**Over time:** strong drift. The subscription rate rises from 3% to 47% across `contact_order` deciles (2008: 68% of rows at 4.5%; 2009: 21%; 2010: 5% of rows at 53%), while euribor falls and the channel moves to cellular.
+
+**Split:** frozen once, stratified random 80/20 on `y`, seed 42: 8,000 train (11.28%) / 2,000 test (11.25%) (`work/exploration/prepare_split.py`, `split_metadata.json`). A random split mixes periods, so all scores are likely optimistic for a future campaign; keeping time columns out limits the damage.
 
 ## Evaluation design
+(`work/design.md`) 5 stratified folds of `train.csv`, seed 42, shared by all candidates and baselines. In each outer fold, an inner 3-fold CV gives out-of-fold probabilities for the training clients; the most profitable top-N on them becomes the share to call, which is then called from the top of the validation fold. The validation labels only measure profit, never decide how many to call (otherwise the cut-off is tuned on the answers, and Earth would reward the luckiest). **Metric:** mean profit per 1,000 over the 5 folds, with std and share called. **Fitness score:** normalized profit = mean profit / €6,765 (the profit of calling only the subscribers), floored at 1e-9. Before the test read, the champion and LR are re-scored on fresh fold seeds 1–5.
 
 ## Baselines (profit per 1,000 clients, share called)
+Scored with the design protocol on `train.csv` (`work/baseline/`):
+
+| Reference | Profit per 1,000 | Std | Share called | Score |
+|---|---|---|---|---|
+| Call everyone | −€2,108 | 21 | 100% | 0 (floor) |
+| `poutcome == "success"` | €1,225 | 220 | 3.3% | 0.181 |
+| Logistic regression (feature boundary, C = 1) | €1,489 | 231 | 11.8% | 0.220 |
+
+LR beats the rule in all 5 folds but reaches only 22% of the maximum profit. **Gate 3:** an Earth search is justified; it must reach ≥ €1,790 per 1,000 (score ≥ 0.264) to be convincing.
 
 ## Formulation (genes and fixed choices)
+(`work/optimization/formulation.md`) **7 genes:** `model_family` (logistic regression / XGBoost), `lr_C_exponent` (−3 to 2), `xgb_max_depth` (2–6), `xgb_n_estimators` (50–400), `xgb_learning_rate_exponent` (−2 to −0.5), `class_weight_balanced` (bool), `pdays_flag` (bool). **Fixed:** the money, the call-list rule (how many to call is never a gene), the folds and seed, the feature boundary (no gene for the economic or time columns), `unknown` as a category, the score, and `train.csv` only. One fitness call = 20 model fits; ~0.8 s for LR, ~1.7 s for XGBoost; a run takes ~2–5 minutes.
 
 ## Earth runs (ids, settings, champion of run1 and run2)
 Both runs: the chromosome in `work/optimization/chromosome.yaml` (7 genes), population 10, 5 workers, 15-minute cap, seed-42 folds. Details in `work/runs/run1/`, `work/runs/run2/`, `work/run_notes.md`.
@@ -98,7 +117,37 @@ The champion stays ahead of the baseline in every scenario, but the gain shrinks
 **Robustness, in one sentence:** the champion's lead over logistic regression is consistent (every fresh seed, every money scenario) but modest, €179 per 1,000 on fresh folds, below the €300 bar set in framing, and it shrinks when a subscription is worth less.
 
 ## Test read (one table: call everyone, simple rule, baseline, champion)
+`test.csv` read once (`work/delivery/test_read.py`, `work/delivery/test_results.json`): 2,000 clients, 225 subscribers (11.25%). For each model, the share was picked on all of `train.csv` (3-fold out-of-fold scores), the model fitted on all of `train.csv`, and that share called from the top of `test.csv`.
+
+| Policy | Profit per 1,000 | Share called | Calls | Subscribers called | Rate among called |
+|---|---|---|---|---|---|
+| Call everyone | −€2,125 | 100% | 2,000 | 225 | 11.3% |
+| `poutcome == "success"` | €900 | 2.6% | 51 | 33 | 64.7% |
+| **LR baseline** | **€1,760** | 8.0% | 159 | 73 | 45.9% |
+| Earth champion (run1, profit fitness) | €1,725 | 20.2% | 404 | 107 | 26.5% |
+| F1 champion (run2) | €1,675 | 13.0% | 260 | 85 | 32.7% |
+
+**Three numbers for the champion vs LR:** search folds +€209, fresh folds +€179, test **−€35** per 1,000.
+- *Search vs fresh:* the fresh folds showed no search optimism in the champion's own profit, but its lead shrank a little.
+- *Fresh vs test:* the main difference is how many clients were called. Picked on all of `train.csv`, the champion's share came out at **20%** (vs ~13% in the folds) and LR's at **8%** (vs ~12%). The champion's extra 245 calls beyond LR's 159 found 34 subscribers, 13.9%, just under the 14.3% break-even, so they cost a little money. Step 8 had warned that the profit curve is flat near its peak, so the chosen share moves a lot between samples.
+- *Noise:* with 225 subscribers, a handful more or fewer moves profit by a few hundred euros per 1,000; −€35 is a tie, not evidence that LR is better. It is clearly not the +€300 required.
+- *Profit vs F1:* the profit-fitness champion made more money on test than the F1 champion (€1,725 vs €1,675), the same order as on the validation folds.
 
 ## Verdict against the success criterion
+_(Draft — the verdict is the student's decision; edit before submitting.)_
+
+| Criterion (framing) | Test result | Met? |
+|---|---|---|
+| More profit than calling everyone | €1,725 vs −€2,125 | ✅ |
+| More profit than the `poutcome == "success"` rule | €1,725 vs €900 | ✅ |
+| At least €300 per 1,000 more than the LR baseline | €1,725 vs €1,760 (−€35) | ❌ |
+
+**Keep the logistic-regression baseline; do not adopt the Earth champion.** The champion's edge was real but modest on `train.csv` (+€179 on fresh folds, every seed positive), always below the €300 bar, and it disappeared on the test set. LR is simpler, easier to explain and calls fewer clients (8% vs 20%) for the same money. Either model is far better than the bank's current options: calling the LR list instead of using the `poutcome` rule earns about €860 more per 1,000 clients, and calling everyone loses money. Caveat for both: the random split mixes 2008–2010, so the next campaign may look different from these numbers.
 
 ## What would you let Earth evolve in your next experiment, and why?
+_(Draft — edit in your own words.)_
+- **Fix the weak spot that cost the champion on test: how many to call.** Keep it out of the chromosome (it must not be tuned on validation labels), but make the share more stable, for example by averaging the share over repeated inner splits, or by picking it from a smoothed profit curve. Then score candidates on profit *including* that instability.
+- **Give LR what XGBoost found:** genes for binning `age` (the U-shape) and for a few interactions (`job` × `contact`, `poutcome` × `contact`). If a regularized LR with these features matches XGBoost, the bank gets the simpler model.
+- **Control XGBoost overfitting with only ~900 positives:** `min_child_weight`, `subsample`, `colsample_bytree`; depth above 6 was already worse.
+- **Make the search score harder to fool:** score each candidate on two fold seeds, or on mean − std, so the winner is the one that is good on many splits, not only on seed 42.
+- **Not the economic or time columns:** they would raise the score on this random split by recognising the period, not the client, and would not help choose whom to call in the next campaign.
