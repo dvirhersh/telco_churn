@@ -1,4 +1,4 @@
-# Framing (Step 1)
+# Framing (Steps 1–2)
 
 ## Business question (your words)
 
@@ -6,17 +6,14 @@
 ## The decision
 
 
-## Target and positive class
+## The money: when does one purchase make or lose money?
 
 
-## Unit of analysis
+## Why losses count extra (risk-adjusted profit)
 
 
-## Money and break-even
+## Success, as numbers (vs the classic baseline, on the 2010 listings)
 
 
-## Success, as numbers
-
-
-## Feature boundary (Step 2): in / out, with a reason per excluded column
+## Feature boundary (Step 2): columns left out, with a reason each
 

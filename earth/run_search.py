@@ -12,7 +12,8 @@ Steps: local pre-check of the chromosome + fitness, upload the training CSV
 project, launch, poll until Earth stops, save the champion. Refuses to upload
 work/exploration/test.csv: the test set never goes to Earth.
 
-GA settings come from the ai1 block of the chromosome YAML, except population
+GA settings come from the ai1 block of the chromosome YAML (defaults: the Session 5 settings tested on
+the iBuyer case), except population
 (--pop), time cap (--minutes), and compute (--units, --cpus), which are sized for
 a class of students running at the same time.
 """
@@ -96,14 +97,14 @@ def ga_settings(chromosome_yaml: Path, args: argparse.Namespace) -> dict:
         "minutes": args.minutes,
         "maximize": bool(ai1.get("is_maximum_problem", True)),
         "elite_pct": float(ga.get("elite_percentage", 0.05)),
-        "mutation_pct": float(ga.get("mutation_percentage", 0.15)),
+        "mutation_pct": float(ga.get("mutation_percentage", 0.3)),
         "unique_mutation_pct": ga.get("unique_mutation_percentage", 0),
         "recalculate_elite": bool(ga.get("recalculate_elite_fitness", False)),
-        "max_stagnation_loops": int(flow.get("max_stagnation_loops", 5)),
-        "max_drifts": int(flow.get("max_drifts_with_no_change", 3)),
-        "steady_threshold": float(flow.get("steady_threshold", 0.001)),
-        "generation_start_steady": int(flow.get("generation_to_start_check_steady_state", 10)),
-        "look_back": int(flow.get("how_many_generations_look_back", 11)),
+        "max_stagnation_loops": int(flow.get("max_stagnation_loops", 15)),
+        "max_drifts": int(flow.get("max_drifts_with_no_change", 8)),
+        "steady_threshold": float(flow.get("steady_threshold", 0.0002)),
+        "generation_start_steady": int(flow.get("generation_to_start_check_steady_state", 30)),
+        "look_back": int(flow.get("how_many_generations_look_back", 20)),
         "generate_final_mutations": bool(ai1.get("generate_final_mutations", False)),
         "enable_genetic_drift": bool(drifts) if drifts is not None else True,
     }
@@ -184,8 +185,8 @@ def main() -> int:
     parser.add_argument("--train", type=Path, default=DEFAULT_TRAIN, help="Training CSV to upload")
     parser.add_argument("--assets", type=Path, nargs="*", default=[], help="Extra files to upload with it")
     parser.add_argument("--minutes", type=int, default=15, help="Time cap for the run")
-    parser.add_argument("--pop", type=int, default=10, help="GA population size")
-    parser.add_argument("--units", type=int, default=5, help="Parallel fitness workers")
+    parser.add_argument("--pop", type=int, default=30, help="GA population size")
+    parser.add_argument("--units", type=int, default=15, help="Parallel fitness workers")
     parser.add_argument("--cpus", type=int, default=1, help="CPUs per fitness worker")
     parser.add_argument("--no-wait", action="store_true", help="Launch, save ids, and exit")
     parser.add_argument("--collect", action="store_true",

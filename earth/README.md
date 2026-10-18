@@ -1,4 +1,4 @@
-# Earth tools (homework)
+# Earth tools (Session 5)
 
 ```bash
 python earth/check_connection.py                     # login check, no experiment
@@ -7,12 +7,14 @@ python earth/validate_chromosome.py work/optimization/chromosome.yaml   # Earth'
 python earth/run_search.py --name run1               # upload, launch, poll, save to work/runs/run1/
 python earth/compare_runs.py run1 run2               # champions side by side
 python earth/fetch_history.py --name run1            # every generation -> work/runs/run1/history.csv
+python earth/classic_baseline.py                     # Step 3: best-RMSE model + one flat margin
+python earth/make_offers.py --name run1              # Step 8: champion -> offers on the 2010 listings
 ```
 
 Defaults: `work/exploration/train.csv`, `work/optimization/chromosome.yaml`,
 `work/optimization/fitness.py`. Change them with `--train`, `--chromosome`,
 `--fitness`; add extra files with `--assets`. `run_search.py` refuses to upload
-`test.csv`. Run size: `--pop` (10), `--units` (5), `--cpus` (1), `--minutes`
+`test.csv`. Run size: `--pop` (30), `--units` (15), `--cpus` (1), `--minutes`
 (15); `--no-wait` and `--collect` to launch now and fetch the result later. The
 other GA settings come from the YAML's `ai1` block if it has one, else defaults.
 
@@ -21,6 +23,9 @@ other GA settings come from the YAML's `ai1` block if it has one, else defaults.
 | File | Role |
 |------|------|
 | `fitness_skeleton.py` | Starting point for `work/optimization/fitness.py` |
+| `ibuyer_market.py` | The market rule (fixed) |
+| `classic_baseline.py` | The classic pipeline, scored like the fitness; writes 2010 offers |
+| `make_offers.py` | Champion -> offers on the 2010 listings |
 | `run_search.py` | Local check, upload, launch, poll, save one run |
 | `check_local.py` | Runs the fitness locally on sample chromosomes |
 | `validate_chromosome.py` | Earth's chromosome validator + a negative control |

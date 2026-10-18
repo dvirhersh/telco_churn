@@ -1,8 +1,11 @@
 > **Source:** the Earth binary-classifier template. Read "template" as "your
-> `fitness.py`". It is a checklist for Step 5 (Formulate).
+> `fitness.py`". It is a checklist for Step 4 (Formulate).
 >
-> In this homework the money (€10 per call, €70 per subscription) and the calling
-> rule (how many to call) stay in `fitness.py`; they are never genes.
+> In this session the market rule (2–20% seller flexibility, 5% costs, the $500k cap, the 0.5 risk
+> weight) and the three past years are fixed in `fitness.py` on purpose: no gene may change them. Unlike
+> the homework, the **pricing policy is a gene block**: what to offer is the decision Earth optimises.
+> The classifier-specific parts below (probabilities, thresholds, class imbalance) do not apply to this
+> regression problem; the rules about genes, determinism and the fitness contract do.
 
 # Chromosome Philosophy – Binary Classifier Template
 

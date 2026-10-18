@@ -10,9 +10,8 @@ middle of every range, bools and bool arrays on), copies the training CSV (and a
 into a temporary folder the way Earth does, runs FitnessClass on it, and checks
 every score is finite and positive. Catches wrong array sizes, enum values the
 fitness does not know, and broken fitness code before you spend an Earth run.
-Then prints a rough run estimate from the slowest call. The fitness fits each
-model 4 times per fold (3 inner folds to pick the share to call, then the full
-training part), so one call takes 3-4 times longer than a single 5-fold CV.
+Then prints a rough run estimate from the slowest call. The Session 5 fitness
+fits two value models (ridge and XGBoost) on three past years per call.
 No Earth calls.
 """
 
@@ -36,7 +35,7 @@ DEFAULT_FITNESS = _REPO_ROOT / "work" / "optimization" / "fitness.py"
 # Scores at or below this are at the error/loss floor (fitness floors scores at 1e-9).
 ERROR_SCORE_CEILING = 1e-6
 # Class run settings (run_search.py defaults) and a typical length, for the run estimate.
-CLASS_POP, CLASS_UNITS, CLASS_MINUTES, TYPICAL_GENERATIONS = 10, 5, 15, 40
+CLASS_POP, CLASS_UNITS, CLASS_MINUTES, TYPICAL_GENERATIONS = 30, 15, 15, 80
 
 
 def load_fitness_module(path: Path):

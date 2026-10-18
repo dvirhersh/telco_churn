@@ -1,21 +1,19 @@
-# Report — Term-deposit campaign
+# Report — Instant offers on Ames homes
 
 ## Framing (short)
 
-## Data and split (feature boundary, split decision, what you found over time)
+## Data, feature boundary, evaluation
 
-## Evaluation design
+## Classic baseline
 
-## Baselines (profit per 1,000 clients, share called)
+## Formulation (valuation genes, policy genes, fixed choices)
 
-## Formulation (genes and fixed choices)
+## Earth run (id, settings, champion)
 
-## Earth runs (ids, settings, champion of run1 and run2)
+## Analysis (guide questions 1–4)
 
-## Analysis (guide questions 1–5)
-
-## Test read (one table: call everyone, simple rule, baseline, champion)
+## 2010 result (from the teacher): classic vs champion, profit, losses, homes bought
 
 ## Verdict against the success criterion
 
-## What would you let Earth evolve in your next experiment, and why?
+## The champion's price model is about as accurate as the classic one. Where did the money come from?
