@@ -134,8 +134,6 @@ The champion stays ahead of the baseline in every scenario, but the gain shrinks
 - *Profit vs F1:* the profit-fitness champion made more money on test than the F1 champion (€1,725 vs €1,675), the same order as on the validation folds.
 
 ## Verdict against the success criterion
-_(Draft — the verdict is the student's decision; edit before submitting.)_
-
 | Criterion (framing) | Test result | Met? |
 |---|---|---|
 | More profit than calling everyone | €1,725 vs −€2,125 | ✅ |
@@ -145,8 +143,7 @@ _(Draft — the verdict is the student's decision; edit before submitting.)_
 **Keep the logistic-regression baseline; do not adopt the Earth champion.** The champion's edge was real but modest on `train.csv` (+€179 on fresh folds, every seed positive), always below the €300 bar, and it disappeared on the test set. LR is simpler, easier to explain and calls fewer clients (8% vs 20%) for the same money. Either model is far better than the bank's current options: calling the LR list instead of using the `poutcome` rule earns about €860 more per 1,000 clients, and calling everyone loses money. Caveat for both: the random split mixes 2008–2010, so the next campaign may look different from these numbers.
 
 ## What would you let Earth evolve in your next experiment, and why?
-_(Draft — edit in your own words.)_
-- **Fix the weak spot that cost the champion on test: how many to call.** Keep it out of the chromosome (it must not be tuned on validation labels), but make the share more stable, for example by averaging the share over repeated inner splits, or by picking it from a smoothed profit curve. Then score candidates on profit *including* that instability.
+- **First, fix the weak spot that cost the champion on test: how many to call.** This stays in the fitness, not in the chromosome (it must never be tuned on validation labels), but the rule can be made more stable: average the best share over several repeated inner splits, or pick it from a smoothed profit curve, so a flat curve does not swing the list from 13% to 20% of clients. Then rerun the same 7-gene search and see whether XGBoost's edge survives.
 - **Give LR what XGBoost found:** genes for binning `age` (the U-shape) and for a few interactions (`job` × `contact`, `poutcome` × `contact`). If a regularized LR with these features matches XGBoost, the bank gets the simpler model.
 - **Control XGBoost overfitting with only ~900 positives:** `min_child_weight`, `subsample`, `colsample_bytree`; depth above 6 was already worse.
 - **Make the search score harder to fool:** score each candidate on two fold seeds, or on mean − std, so the winner is the one that is good on many splits, not only on seed 42.
