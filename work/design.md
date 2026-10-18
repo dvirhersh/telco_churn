@@ -39,4 +39,16 @@ In Step 8, before Step 9:
 - Only after this check is the champion scored once on `test.csv`.
 
 ## Gate 3 (Step 4): does the baseline justify an Earth search? What gain would convince you?
-To be answered in Step 4, after scoring the three baselines with this protocol (call everyone, `poutcome == "success"`, logistic regression). Starting point from `framing.md`: Earth must beat logistic regression by at least €300 per 1,000 clients. I will revisit this number once I see the fold-to-fold std of the baselines' profit: if the std is larger than €300, the margin needs to grow.
+Baselines scored with this protocol on `train.csv` (`work/baseline/baselines.py`, `work/baseline/metrics.json`):
+
+| Reference | Profit per 1,000 (mean) | Std over folds | Share called | Score |
+|---|---|---|---|---|
+| Call everyone | −€2,108 | €21 | 100% | 0.000 (floor) |
+| `poutcome == "success"` | +€1,225 | €220 | 3.3% | 0.181 |
+| Logistic regression (feature boundary, no tuning) | +€1,489 | €231 | 11.8% | 0.220 |
+
+- **LR beats both simple references.** It makes €264 per 1,000 more than the `poutcome` rule and wins in all 5 folds (per-fold gain +269, +281, +69, +338, +363).
+- **Noise.** Each model's std is ~€230, but most of it is the same folds being easy or hard for every model. Paired on the same fold, LR's gain over the rule varies by only ~€100 (std). So candidates must be compared fold by fold, on the same folds, not by overlapping ± ranges.
+- **Room to gain.** LR earns 22% of the perfect campaign (€1,489 of €6,765). It is linear on a small feature set, and the EDA shows signals a linear model misses (`age` is U-shaped; possible interactions such as job × contact). A more flexible model family, class weights and feature handling are what Earth can explore.
+- **The margin stays at €300 per 1,000.** It is above LR's fold std (€231) and about 3× the paired fold-to-fold spread (~€100), so a gain of that size is unlikely to be luck. In score terms: the champion must reach at least €1,790 per 1,000, a score ≥ 0.264, on these folds, and keep a lead of at least €300 over LR on the fresh folds (see above).
+- **Verdict: the Earth search is justified.** The baseline is clearly better than the simple rule but far from the ceiling. A champion below €1,790 per 1,000, or one whose lead disappears on fresh folds, means logistic regression stays the recommendation.
