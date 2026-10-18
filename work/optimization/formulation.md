@@ -35,4 +35,11 @@ Not genes, on purpose:
 | Data | `train.csv` only | `test.csv` is read once, in Step 9. |
 
 ## Run estimate (Step 6): time per fitness call, generations, workers, expected minutes
-To fill in Step 6, after timing one fitness call with `python earth/check_local.py` (one call = 20 model fits: 5 outer folds × (3 inner + 1 refit)).
+One fitness call = 20 model fits: 5 outer folds × (3 inner + 1 refit).
+
+- Time per call (`python earth/check_local.py`, genes at mid-range): logistic regression 0.8 s, XGBoost 1.7 s. The slowest corner of the ranges (XGBoost depth 6, 400 trees, all options on) takes 3.4 s.
+- Population 10 on 5 workers = 2 rounds per generation.
+- About 40 generations: 1.7 s × 2 × 40 ≈ 2 minutes; worst case 3.4 s × 2 × 40 ≈ 4.5 minutes.
+- That fits the 15-minute class cap, so the cap is unlikely to stop the search early.
+- Checks: `check_local.py` OK; `validate_chromosome.py` accepted by the Earth validator.
+- Sanity check: with the baseline settings (LR, C = 1, no class weight, no `pdays` flag) the fitness gives €1,488.75 per 1,000 (score 0.220), the same as `work/baseline/baselines.py`.
