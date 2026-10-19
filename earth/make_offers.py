@@ -1,12 +1,12 @@
-"""Step 8: turn a champion into offers on the 2010 listings (the file you hand in).
+"""Step 8: turn a champion into offers on the 2010 listings (scored in the reveal).
 
     python earth/make_offers.py --name run1
     python earth/make_offers.py --name run1 --fitness work/runs/run1/fitness.py
 
 Refits the champion's value models on all of 2006-2009 (work/exploration/train.csv), predicts every
 2010 listing, applies the champion's pricing policy, and writes work/delivery/offers_2010_<name>.csv
-(ListingID, predicted_value, offer, make_offer). Nobody can score it except the teacher: the 2010 sale
-prices are not in this repository.
+(ListingID, predicted_value, offer, make_offer). It is scored by earth/score_2010.py once the teacher releases
+the 2010 sale prices at the end of the lab.
 """
 import argparse
 import importlib.util

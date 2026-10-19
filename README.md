@@ -2,12 +2,12 @@
 
 > **Before you start:** read [PROJECT_BRIEF.md](PROJECT_BRIEF.md) (10 minutes). You run the whole
 > pathway on a new problem: frame it, look at the data, score the classic approach, let Earth evolve a
-> better one, analyse the run, and hand in offers that the teacher scores on what the 2010 homes really
-> sold for.
+> better one, analyse the run, and at the end score your offers on what the 2010 homes really sold for.
+> The work is for you: nothing is handed in or graded.
 >
 > **Time:** 10:40 (after the demo) to 15:30; the steps below take about 3 hours of work, and you may keep going through
-> the break. At 15:30 we stop for the course wrap-up. Not finished? Finish after class and hand in your
-> offers when the teacher asks.
+> the break. At 15:30 we stop for the course wrap-up. Not finished? Finish after class; the 2010
+> prices stay in the repository after the reveal.
 
 ## The lab
 
@@ -33,6 +33,7 @@ earth/ibuyer_market.py        The market rule (fixed)
 earth/classic_baseline.py     Step 3: the classic pipeline
 earth/fitness_skeleton.py     Step 5: your fitness starts here
 earth/make_offers.py          Step 8: champion -> offers on the 2010 listings
+earth/score_2010.py           Step 8: the reveal, once the teacher releases the 2010 prices
 earth/                        Earth tools: check_local, validate_chromosome, run_search, fetch_history, compare_runs
 context/                      Pathway, methods, chromosome philosophy
 work/                         Your work (templates to fill in)
@@ -172,7 +173,7 @@ python earth/fetch_history.py --name run1
 
 **Done when:** checklist items 1–4 of the guide are ticked.
 
-## Step 8 — Hand in offers, then the reveal (20 min)
+## Step 8 — Make offers, then the reveal (20 min)
 
 **Do:**
 
@@ -180,8 +181,16 @@ python earth/fetch_history.py --name run1
 python earth/make_offers.py --name run1
 ```
 
-Hand in `work/delivery/offers_2010_run1.csv` and `work/baseline/offers_2010_classic.csv`. The teacher
-scores both on the real 2010 prices with the same market rule, and shows the class results.
+Write your prediction for 2010 in `work/delivery/report.md` first. When the teacher releases the 2010
+prices (about 14:50):
+
+```bash
+git pull
+python earth/score_2010.py
+```
+
+It scores your offers and the classic offers on the real 2010 prices with the same market rule. Run it
+once: tuning on these numbers would turn the test into training data. We then compare results as a class.
 
 **Deliver:** `work/delivery/report.md`, complete: the 2010 result table, your verdict against the
 success criterion, and your answer to: *The champion's price model is about as accurate as the classic

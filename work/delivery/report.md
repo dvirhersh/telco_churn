@@ -12,7 +12,9 @@
 
 ## Analysis (guide questions 1–4)
 
-## 2010 result (from the teacher): classic vs champion, profit, losses, homes bought
+## 2010 prediction (written before the reveal)
+
+## 2010 result (earth/score_2010.py): classic vs champion, profit, losses, homes bought
 
 ## Verdict against the success criterion
 

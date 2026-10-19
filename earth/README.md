@@ -9,6 +9,7 @@ python earth/compare_runs.py run1 run2               # champions side by side
 python earth/fetch_history.py --name run1            # every generation -> work/runs/run1/history.csv
 python earth/classic_baseline.py                     # Step 3: best-RMSE model + one flat margin
 python earth/make_offers.py --name run1              # Step 8: champion -> offers on the 2010 listings
+python earth/score_2010.py                           # Step 8: the reveal (after the teacher releases the prices)
 ```
 
 Defaults: `work/exploration/train.csv`, `work/optimization/chromosome.yaml`,
@@ -26,6 +27,7 @@ other GA settings come from the YAML's `ai1` block if it has one, else defaults.
 | `ibuyer_market.py` | The market rule (fixed) |
 | `classic_baseline.py` | The classic pipeline, scored like the fitness; writes 2010 offers |
 | `make_offers.py` | Champion -> offers on the 2010 listings |
+| `score_2010.py` | The reveal: scores your offers once the 2010 prices are released |
 | `run_search.py` | Local check, upload, launch, poll, save one run |
 | `check_local.py` | Runs the fitness locally on sample chromosomes |
 | `validate_chromosome.py` | Earth's chromosome validator + a negative control |

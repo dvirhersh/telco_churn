@@ -2,7 +2,7 @@
 
 You have a champion. This guide is how you decide whether to believe it, what it learned, and what it
 is worth. Work through the four questions in order; each one ends with something to write in
-`work/delivery/report.md`. The fifth number, the 2010 result, comes from the teacher in Step 8.
+`work/delivery/report.md`. The fifth number, the 2010 result, comes at the end of Step 8.
 
 ## Where the evidence lives
 
@@ -59,7 +59,7 @@ business owner would understand.
 
 ## 5. The reveal (Step 8)
 
-The teacher scores your offers and the classic offers on the real 2010 prices. Before you see them,
+`earth/score_2010.py` scores your offers and the classic offers on the real 2010 prices. Before you run it,
 write your prediction. Afterwards: the past-years score, the 2010 result, and the class spread are
 three different numbers. Explain them. 2010 prices fell a little compared with 2009: what does that do
 to every offer policy?

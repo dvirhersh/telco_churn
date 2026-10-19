@@ -50,8 +50,8 @@ columns describing it (size, quality, age, location, basement, garage...). Colum
 | `data/ames_history.csv` | 2,589 sales, 2006–2009 | Features **and** `SalePrice` (the true value) |
 | `data/ames_2010_listings.csv` | 341 homes listed in 2010 | Features and `ListingID`, **no price** |
 
-The 2010 sale prices are held by the teacher. You hand in offers; the teacher scores them on what the
-homes really sold for. (The Ames data is public. Looking up 2010 prices defeats the point: please don't.)
+The 2010 sale prices are held by the teacher until the end of the lab. Then you score your own offers on
+what the homes really sold for, once. (The Ames data is public. Looking up 2010 prices defeats the point: please don't.)
 
 ## Target and unit
 

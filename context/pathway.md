@@ -16,12 +16,12 @@ Phases: **Frame → Explore → Build → Optimize → Deliver**.
 | Optimize | Packaging + Validation | 5 | `fitness.py` + `chromosome.yaml` pass the local check and Earth's validator |
 | Optimize | Execution | 6 | One run saved |
 | Optimize → Deliver | Analysis | 7 | Analysis guide questions 1–4 answered |
-| Deliver | Test read | 8 | Offers handed in; 2010 result and verdict in the report |
+| Deliver | Test read | 8 | Offers made; scored once on 2010; result and verdict in the report |
 
 ## Two non-negotiable rules
 
-1. **Locked test.** The test is the 2010 listings. Their prices are not in this repository; only the
-   teacher scores offers on them, once, in Step 8. Never tune anything on 2010.
+1. **Locked test.** The test is the 2010 listings. Their prices are released only at the end of the lab;
+   you score your offers on them once, in Step 8. Never tune anything on 2010.
 2. **Baseline independence.** The classic baseline is scored in Step 3, before any search. A GA
    champion is never a baseline.
 
@@ -46,5 +46,5 @@ writing in Step 3; it sets what a "good" Earth result means.
 | `data/ames_history.csv` | Source sales 2006–2009; never edited |
 | `work/exploration/train.csv` | Copy of the history: baselines, local checks, Earth |
 | Past-year folds | Inside the fitness: fit on years before Y, offer on Y, for Y = 2007, 2008, 2009 |
-| `data/ames_2010_listings.csv` | The test: 2010 homes without prices; you hand in offers |
-| 2010 sale prices | Teacher only; scored once in Step 8 |
+| `data/ames_2010_listings.csv` | The test: 2010 homes without prices; you make offers on them |
+| `data/ames_2010_prices.csv` | Released by the teacher at the end; scored once in Step 8 |
