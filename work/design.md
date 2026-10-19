@@ -48,7 +48,33 @@ market rule. Nothing is tuned on 2010: it is the only result that was never seen
 
 
 ## Classic baseline (Step 3): value model, RMSE, best flat margin, risk-adjusted profit per listing, share bought
+`python3 earth/classic_baseline.py` → `work/baseline/classic_metrics.json`, `offers_2010_classic.csv`.
+All numbers are on the three past-year folds (2007–2009 pooled, 1,964 homes), not on 2010.
 
+| Item | Value |
+|------|-------|
+| Most accurate value model | XGBoost, depth 4, 700 trees, learning rate 0.03, log price, all 75 features |
+| RMSE / MAPE | **$26,954** / 8.7% (best ridge: $33,266) |
+| Best flat margin | **18%** (searched 0–30% in steps of 1%) |
+| Risk-adjusted profit per listing | **−$160** (profit $547, losses −$1,416) |
+| Share of listings bought | **23%** |
+| Per year | 2007: −$593, 2008: −$25, 2009: +$173 |
+| Fitness scale | 0.4733 (break-even = 0.5) |
+
+The classic approach loses money on the past years, even with the margin tuned on them. These scores
+were used to choose the model and the margin, so they are optimistic; only the 2010 test is unbiased.
 
 ## Gate 3: what is left to gain, and where does a flat margin lose money?
+**Enough to gain? Yes.** The best classic policy loses money on 2007–2009 (−$160 per listing: losses
+$1,416 > profit $547). Any policy that avoids the bad deals gains.
 
+**Where a flat margin loses:** on homes the model **overvalues**, because sellers accept those offers
+(undervalued homes are just refused). A flat margin treats every home as if the model were equally
+sure. Likely places: expensive homes (> $300k, few training examples), rare quality levels (≤ 4 or
+≥ 9), very old homes, and homes where ridge and XGBoost disagree.
+
+**Trap:** three huge Edwards homes (> 4,000 sq ft, 2007–08) were valued far above their sale price.
+2010 has no such homes, so avoiding them flatters the past-year score; check 2009 too.
+
+**Policy idea:** a bigger margin, or no offer, where the model is likely wrong: by disagreement, price
+tier, quality and age.
