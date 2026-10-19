@@ -1,4 +1,4 @@
-# Prompts for your coding agent (Session 5)
+# Prompts for your coding agent (Lab 2)
 
 Copy, paste, adapt. You make the decisions; the agent writes code and explains. Read what it does
 before you accept it.

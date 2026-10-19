@@ -1,11 +1,15 @@
-# Earth Session 5 — Instant offers on Ames homes
+# Earth Lab 2 — Instant offers on Ames homes
 
-> **Before you start:** read [PROJECT_BRIEF.md](PROJECT_BRIEF.md) (10 minutes). The session takes
-> about 3 hours. You run the whole pathway on a new problem: frame it, look at the data, score the
-> classic approach, let Earth evolve a better one, analyse the run, and hand in offers that the teacher
-> scores on what the 2010 homes really sold for.
+> **Before you start:** read [PROJECT_BRIEF.md](PROJECT_BRIEF.md) (10 minutes). You run the whole
+> pathway on a new problem: frame it, look at the data, score the classic approach, let Earth evolve a
+> better one, analyse the run, and hand in offers that the teacher scores on what the 2010 homes really
+> sold for.
+>
+> **Time:** 10:30 to 15:30; the steps below take about 3 hours of work, and you may keep going through
+> the break. At 15:30 we stop for the course wrap-up. Not finished? Finish after class and hand in your
+> offers when the teacher asks.
 
-## The session
+## The lab
 
 An iBuyer makes cash offers on listed homes and resells the ones it buys. Offer too much and sellers
 accept, and you lose money. Offer too little and nobody sells. The classic data-science answer is: build

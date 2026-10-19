@@ -1,4 +1,4 @@
-# Session 5 pathway (minimal practices)
+# Lab 2 pathway (minimal practices)
 
 Map of phases and practices: [methods/PROJECT_DELIVERY_PRACTICES_ONE_PAGER.md](methods/PROJECT_DELIVERY_PRACTICES_ONE_PAGER.md).
 Tabular EDA and split detail: [methods/TABULAR_EDA_AND_SPLIT_GUIDELINES.md](methods/TABULAR_EDA_AND_SPLIT_GUIDELINES.md).

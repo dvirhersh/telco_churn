@@ -1,4 +1,4 @@
-"""The iBuyer market rule for Session 5. Fixed for everyone; never a gene.
+"""The iBuyer market rule for Lab 2. Fixed for everyone; never a gene.
 
 A seller accepts an offer when  offer >= (1 - flex) x true value,  with flex ~ Uniform(2%, 20%)
 (how far below value a seller will go for a fast, certain sale). An accepted home is resold at its

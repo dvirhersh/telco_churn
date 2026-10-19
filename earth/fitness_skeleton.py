@@ -1,4 +1,4 @@
-"""Fitness skeleton for Session 5: iBuyer instant offers on Ames. Copy it, then fill in the TODOs.
+"""Fitness skeleton for Lab 2: iBuyer instant offers on Ames. Copy it, then fill in the TODOs.
 
     cp earth/fitness_skeleton.py work/optimization/fitness.py
 

@@ -1,4 +1,4 @@
-# Project brief — Instant offers on Ames homes (Session 5)
+# Project brief — Instant offers on Ames homes (Lab 2)
 
 ## Background
 

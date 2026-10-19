@@ -1,4 +1,4 @@
-# Experiment analysis guide (Session 5)
+# Experiment analysis guide (Lab 2)
 
 You have a champion. This guide is how you decide whether to believe it, what it learned, and what it
 is worth. Work through the four questions in order; each one ends with something to write in

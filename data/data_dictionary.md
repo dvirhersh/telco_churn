@@ -1,4 +1,4 @@
-# Data dictionary — Ames Housing (Session 5)
+# Data dictionary — Ames Housing (Lab 2)
 
 Source: the Ames Housing data (Dean De Cock, *Journal of Statistics Education*, 2011), via the
 `AmesHousing` R package (`ames_raw`). Every residential sale in Ames, Iowa, 2006 – July 2010.

@@ -10,7 +10,7 @@ middle of every range, bools and bool arrays on), copies the training CSV (and a
 into a temporary folder the way Earth does, runs FitnessClass on it, and checks
 every score is finite and positive. Catches wrong array sizes, enum values the
 fitness does not know, and broken fitness code before you spend an Earth run.
-Then prints a rough run estimate from the slowest call. The Session 5 fitness
+Then prints a rough run estimate from the slowest call. The Lab 2 fitness
 fits two value models (ridge and XGBoost) on three past years per call.
 No Earth calls.
 """

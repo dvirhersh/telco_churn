@@ -1,4 +1,4 @@
-# Earth tools (Session 5)
+# Earth tools (Lab 2)
 
 ```bash
 python earth/check_connection.py                     # login check, no experiment
