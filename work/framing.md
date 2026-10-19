@@ -56,3 +56,17 @@ against the baseline numbers in Step 3, before the search.)
 
 ## Feature boundary (Step 2): columns left out, with a reason each
 
+The offer is made when a home is listed, before any sale. Every column that is only known once the sale
+closes is left out of the value model and the policy. (Evidence: `work/exploration/eda.ipynb`.)
+
+| Column | Decision | Reason |
+|--------|----------|--------|
+| `Sale Condition` | Drop | It describes how the sale ended: a foreclosure or short sale (`Abnorml`, median $131k), a new home sold before completion (`Partial`, $249k), a family sale. It is the outcome of the deal, not a fact about the house, and it is not in the 2010 listings. Keeping it would let the model learn from the answer. |
+| `Sale Type` | Drop | The kind of deed or contract (`WD`, `New`, `COD`, contract terms). It is set when the sale is signed, and it is not in the 2010 listings. |
+| `Mo Sold` | Drop | The month the sale **closed**, not the month the home was listed: we would not know it when we make the offer. It also carries almost no signal (monthly medians $152k–$177k, no season pattern). |
+| `Yr Sold` | Drop as a feature; keep for the folds | We know the year at offer time, but every 2010 listing has the same value, one the model never saw in training: a tree model treats it as 2009 and a linear model extrapolates a trend that is not there (medians were flat at $160–165k from 2006 to 2009). It is used only to build the past-year folds. |
+| `Order`, `PID`, `ListingID` | Drop | Row and parcel identifiers: no information about value. |
+
+Kept: every other column describes the house and its lot, which is known from the listing. `NA` in
+basement, garage, pool and similar columns means "none", so it stays as a category.
+

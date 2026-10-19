@@ -2,11 +2,46 @@
 
 ## How a candidate is scored (years, what is fit where, what is offered on)
 
+A candidate is a value model plus a pricing policy. It is scored on three past years, each one an
+expanding window over `work/exploration/train.csv`:
+
+| Fold | Fit the value model on | Make offers on |
+|------|------------------------|----------------|
+| Y = 2007 | 625 sales of 2006 | 694 sales of 2007 |
+| Y = 2008 | 1,319 sales of 2006–2007 | 622 sales of 2008 |
+| Y = 2009 | 1,941 sales of 2006–2008 | 648 sales of 2009 |
+
+In each fold the model predicts the value of every home in year Y, the policy turns that into an offer
+(or no offer), and the market rule (`earth/ibuyer_market.py`) gives the expected profit and losses using
+the real `SalePrice` as the true value. The three folds are added up: 1,964 offers in total. Features are
+the columns inside the feature boundary (`work/framing.md`); `Yr Sold` is used only to split the folds.
+
 
 ## Why past years and not a random split
 
+- **It is the real question.** In early 2010 we have sales up to 2009 and must price homes we have never
+  seen, later in time. Fitting on earlier years and offering on a later one is the same situation, three
+  times over.
+- **A random split leaks the future.** It trains on 2009 sales to price 2007 homes, so the model sees
+  prices from after the offer date, including neighbours sold later and market moves we could not know.
+  The error it reports would be too optimistic.
+- **The housing mix changes year to year.** New homes (`Partial` sales) fell from about 90 a year in
+  2006–07 to about 28 in 2008–09. A forward split tests whether the model and policy still work when the
+  mix shifts, which a random split hides by mixing the years.
+- **Three years, not one,** so a policy that only works in one market (for example 2007, before the
+  crash) does not win. Prices were flat (medians $160–165k), so the main risk is the mix, not inflation.
+
+Cost: the 2007 fold trains on one year only (625 sales), so it is harder than the others. That is
+fine: it is the same handicap for every candidate.
+
 
 ## The 2010 test: what it is, who scores it
+
+The 341 homes listed in Ames from January to July 2010 (`data/ames_2010_listings.csv`), with features
+and `ListingID` but no price. The final champion and the classic baseline each make one offer (or none)
+per listing, trained on all of 2006–2009. The teacher holds the 2010 sale prices and releases them at
+the end of the lab; we then score both sets of offers once with `earth/score_2010.py`, under the same
+market rule. Nothing is tuned on 2010: it is the only result that was never seen during the search.
 
 
 ## The score (Step 5): risk-adjusted dollars per listing -> fitness
