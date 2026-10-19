@@ -5,7 +5,7 @@
 > better one, analyse the run, and hand in offers that the teacher scores on what the 2010 homes really
 > sold for.
 >
-> **Time:** 10:30 to 15:30; the steps below take about 3 hours of work, and you may keep going through
+> **Time:** 10:40 (after the demo) to 15:30; the steps below take about 3 hours of work, and you may keep going through
 > the break. At 15:30 we stop for the course wrap-up. Not finished? Finish after class and hand in your
 > offers when the teacher asks.
 
