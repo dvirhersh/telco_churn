@@ -49,52 +49,6 @@ market rule. Nothing is tuned on 2010: it is the only result that was never seen
 
 ## Classic baseline (Step 3): value model, RMSE, best flat margin, risk-adjusted profit per listing, share bought
 
-`python3 earth/classic_baseline.py` → `work/baseline/classic_metrics.json`, `offers_2010_classic.csv`.
-
-| Item | Value |
-|------|-------|
-| Most accurate value model | XGBoost, depth 4, 700 trees, learning rate 0.03, log price, all feature groups |
-| RMSE / MAPE on 2007–2009 | **$26,954** / 8.7% (best ridge: $33,266; log-price ridge breaks down at $65,843) |
-| Best flat margin | **18%** (searched 0–30% in steps of 1%) |
-| Risk-adjusted profit per listing | **−$160** (profit $547, losses −$1,416) |
-| Share of listings bought | 23% |
-| Per year | 2007: −$593, 2008: −$25, 2009: +$173 |
-| For comparison: flat 10% | −$2,782 per listing, buys 55% |
-| Fitness of the baseline | 0.4733 (break-even = 0.5) |
-
-The classic approach **loses money** on the past years, even with the margin tuned on them. No flat margin
-in 0–30% is positive.
-
 
 ## Gate 3: what is left to gain, and where does a flat margin lose money?
-
-Breakdown per home: `python3 work/baseline/gate3_segments.py` (writes `work/baseline/gate3_homes.csv`).
-
-**Where it loses.** All the losses come from homes the model **overvalues by more than 10%** (286 homes:
-−$1.76M). Undervalued homes cost nothing, they are just refused. A flat margin cannot tell these apart, so
-the policy has to find *signals* of overvaluation:
-
-| Segment | Homes | Risk-adj. total | Note |
-|---------|-------|-----------------|------|
-| `Overall Qual` = 10 | 25 | **−$1.23M** | Three huge new homes in Edwards (4,676–5,642 sq ft, partial sales) were valued at $520–550k and sold for $150–185k: **−$1.22M, i.e. −$624 per listing on their own** |
-| Predicted value > $300k | 167 | −$1.47M | Few training homes, offers near the $500k cap |
-| Top 20% ridge/xgb disagreement (> 8%) | 393 | −$1.73M | The other four quintiles are all positive (+$1.4M together) |
-| Built before 1920 | 157 | −$0.38M | Old homes, wide spread |
-| `Overall Qual` ≤ 4 | 178 | −$0.42M | Cheap homes, few sales |
-| Neighbourhoods | | Edwards −$1.27M, OldTown −$0.30M, IDOTRR −$0.20M | |
-
-**Where it earns.** Quality 5–8, built 1970–2000, predicted $100–300k, low model disagreement: these are
-all positive (quality 6–7 alone: +$1.09M).
-
-**What is left to gain.** 148 of the 1,964 past-year homes lose money in expectation; they cost $2,123 per
-listing. With the same model and offers, skipping exactly those would score **+$1,963 per listing**, about
-$2,100 above the baseline. A real policy cannot find all of them, but model disagreement, price tier and
-quality pick out most of the losses. Gate 3: **yes, there is enough to gain to justify the search.**
-
-**Caveat for 2010.** The 2010 listings have **no** homes over 4,000 sq ft and no quality-10 homes. On the
-past years, simply not buying those three Edwards homes is worth about +$624 per listing; on 2010 it is
-worth nothing. So part of any past-year gain over the baseline will not show up in 2010. Earth will
-find a gene that avoids them, so I will compare the champion and the baseline on the past years with and
-without those homes, and I keep the success threshold at **+$1,000 per listing on 2010** (set in Step 1,
-before these numbers).
 
