@@ -1,0 +1,148 @@
+# iBuyer on Ames: the valuation pipeline and the pricing policy evolve together.
+chromosome:
+  type: dict
+  generation:
+    type: per_item
+    non_required_probability: 0
+  mutation:
+    type: random
+    percentage_to_mutate: 0.15
+    max_percentage_to_mutate: 0.25
+    num_items_to_mutate: 2
+    max_num_items_to_mutate: 3
+    drift_factor: 1.1
+  crossover:
+    type: per_item_crossover
+    per_item_select_strategy: random
+  content:
+    w_xgb:
+      type: float
+      min_value: 0.0
+      max_value: 1.0
+      generation: { type: uniform }
+      mutation: { percentage_change: 0.2 }
+      crossover: { type: random }
+    ridge_alpha:
+      type: float
+      min_value: 0.3
+      max_value: 100.0
+      generation: { type: uniform }
+      mutation: { percentage_change: 0.3 }
+      crossover: { type: random }
+    quantile_alpha:
+      type: float
+      min_value: 0.15
+      max_value: 0.5
+      generation: { type: uniform }
+      mutation: { percentage_change: 0.2 }
+      crossover: { type: random }
+    log_price:
+      type: bool
+    drop_big_houses:
+      type: bool
+    use_quantile:
+      type: bool
+    use_age:
+      type: bool
+    use_location:
+      type: bool
+    use_basement_garage:
+      type: bool
+    use_extras:
+      type: bool
+    xgb:
+      type: dict
+      generation: { type: per_item, non_required_probability: 0 }
+      mutation: { type: random, percentage_to_mutate: 0.3 }
+      crossover: { type: per_item_crossover }
+      content:
+        n_estimators:
+          type: int
+          min_value: 200
+          max_value: 800
+          generation: { type: uniform }
+          mutation: { step_size: 50, percentage_change: 0.2 }
+          crossover: { type: random }
+        max_depth:
+          type: int
+          min_value: 2
+          max_value: 6
+          generation: { type: uniform }
+          mutation: { step_size: 1, percentage_change: 0.2 }
+          crossover: { type: random }
+        learning_rate:
+          type: float
+          min_value: 0.02
+          max_value: 0.15
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.2 }
+          crossover: { type: random }
+        subsample:
+          type: float
+          min_value: 0.6
+          max_value: 1.0
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.1 }
+          crossover: { type: random }
+        colsample_bytree:
+          type: float
+          min_value: 0.4
+          max_value: 1.0
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.1 }
+          crossover: { type: random }
+    policy:
+      type: dict
+      generation: { type: per_item, non_required_probability: 0 }
+      mutation: { type: random, percentage_to_mutate: 0.3 }
+      crossover: { type: per_item_crossover }
+      content:
+        base_margin:
+          type: float
+          min_value: 0.05
+          max_value: 0.30
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.2 }
+          crossover: { type: random }
+        k_disagree:
+          type: float
+          min_value: 0.0
+          max_value: 2.0
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.3 }
+          crossover: { type: random }
+        abstain_disagree:
+          type: float
+          min_value: 0.05
+          max_value: 0.50
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.2 }
+          crossover: { type: random }
+        max_offer_value:
+          type: float
+          min_value: 200000.0
+          max_value: 500000.0
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.2 }
+          crossover: { type: random }
+        adj_high_tier:
+          type: float
+          min_value: -0.05
+          max_value: 0.10
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.3 }
+          crossover: { type: random }
+        adj_qual_extreme:
+          type: float
+          min_value: -0.05
+          max_value: 0.10
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.3 }
+          crossover: { type: random }
+        adj_age_old:
+          type: float
+          min_value: -0.05
+          max_value: 0.10
+          generation: { type: uniform }
+          mutation: { percentage_change: 0.3 }
+          crossover: { type: random }

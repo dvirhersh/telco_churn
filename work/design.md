@@ -46,6 +46,10 @@ market rule. Nothing is tuned on 2010: it is the only result that was never seen
 
 ## The score (Step 5): risk-adjusted dollars per listing -> fitness
 
+`score = (risk_adj + 3000) / 6000`, floored at 1e-9. Linear, so ranking candidates by score is the
+same as ranking them by risk-adjusted dollars per listing. Break-even ($0) maps to 0.5, and −$3,000 to
++$3,000 per listing maps to 0–1, which covers most candidates. The classic baseline is scored on the
+same scale.
 
 ## Classic baseline (Step 3): value model, RMSE, best flat margin, risk-adjusted profit per listing, share bought
 `python3 earth/classic_baseline.py` → `work/baseline/classic_metrics.json`, `offers_2010_classic.csv`.

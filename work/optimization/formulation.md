@@ -45,3 +45,6 @@ Total: 16 valuation + 7 policy genes = 23.
 
 ## Run estimate (Step 5): seconds per fitness call, population 30, 15 workers, expected minutes
 
+About 2 s per fitness call (`earth/check_local.py`, mid-range genes). Population 30 on 15 workers is
+2 rounds per generation, so 80 generations take about 2 s × 2 × 80 ≈ 5 min, well under the 15-minute
+class cap. The largest models in the ranges (800 trees, depth 6) are slower, so expect a bit more.
