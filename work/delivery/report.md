@@ -292,7 +292,43 @@ by about half; the half that remained was real.** The gain over the classic poli
   `drop_big_houses`.
 - **Choose among the near-ties by their worst year**, not by the average.
 
-*Class spread:* (fill in after the class comparison)
+### Class spread (one classmate)
+
+One classmate shared results. Their classic line is identical to mine (−$68,038), so the comparison is
+fair.
+
+| Per listing | Classic | My champion | Classmate's champion |
+|---|---|---|---|
+| Past-year fitness (Earth) | 0.473 | 0.710 | 0.721 |
+| Past-year risk-adj (Earth) | −$160 | +$1,263 | +$1,326 |
+| **2010 risk-adj** | **−$200** | **+$526** | **+$800** |
+| 2010 gain over classic | | +$725 | **+$1,000** |
+| 2010 score | 0.467 | 0.588 | 0.633 |
+| Drop, Earth → 2010 | | −$737 | −$526 |
+| 2010 profit / losses | $448 / −$1,296 | $993 / −$936 | $1,138 / −$678 |
+| 2010 share bought | 22.7% | 26.0% | 20.9% |
+
+**What both searches found independently:** a ridge-heavy blend (`w_xgb` 0.40 and 0.09), a
+lower-quantile XGBoost (α = 0.15 and 0.24), log price, dropping houses over 4,000 sq ft, a base margin
+near 13% (13.9% and 12.8%, below the classic 18%), and no offer when the models disagree strongly
+(above 15.6% and 21%). Two separate runs agreeing on this shape is good evidence that it is real, not
+noise.
+
+**Where they differ, and why theirs did better in 2010:**
+- **Their margin grows with disagreement** (`k_disagree` 0.56; mine ≈ 0). Uncertain homes get a lower
+  bid instead of an all-or-nothing cutoff.
+- **Price limits:** they make no offer below $118k or above $417k. The $118k floor skips cheap homes,
+  where a few thousand dollars of error is a large percentage. My policy had no such gene.
+- **A segment I did not think of:** homes with `Functional` deductions get +7.2% margin.
+- **The result:** they buy fewer homes (20.9% vs 26.0%) but lose far less (−$678 vs −$936 per listing),
+  and their gain over the classic policy is exactly +$1,000, which would meet my criterion 1.
+
+**What the spread says:** two runs of the same method on the same data differ by $274 per listing in
+2010. That is a third of my gain. So a single run's 2010 number is not precise enough to call the
+size of the gain, which supports my "better, but not proven" verdict. The direction is consistent:
+both champions beat the classic policy, with lower losses. Their score also dropped less from Earth to
+2010 (−$526 vs −$737), which fits their simpler stopping point (91 generations vs 179, and fewer
+chances to select lucky scores). With only two runs, that is a hint, not a finding.
 
 ## Verdict against the success criterion
 
@@ -319,6 +355,28 @@ Not from better prices. In 2010 the price errors are 10.0% vs 10.1%, and on the 
    ordinary homes, fewer accepted overpayments.
 3. **A bigger cut where homes are hard to price:** pre-1920 homes (+5.9%) and extreme quality levels
    (+2.3%).
+
+**The champion's margins on the 2010 offers** (`offers_2010_run1.csv`, margin = 1 − offer / predicted
+value):
+
+```
+margin = 13.9% (base) + 0.002 × disagreement (≈ 0)
+       + 5.9% if built before 1920 + 2.3% if Overall Qual ≤ 4 or ≥ 9 − 1.1% if predicted value > $300k
+no offer if the models disagree by more than 15.6%
+```
+
+| Homes | Offers | Margin |
+|---|---|---|
+| Ordinary | 254 | 13.9% |
+| Extreme quality (≤ 4 or ≥ 9) | 30 | 16.3% |
+| Built before 1920 (some also extreme quality) | 22 | 19.9–22.2% |
+| Predicted value > $300k | 8 | 12.8–15.2% |
+| **All offers** | **314** | **mean 14.7%, median 13.9%** |
+| No offer (models disagree > 15.6%) | 27 | — |
+
+The classic policy uses 18% on all 341 listings. The champion's margin is smaller, but it is taken
+from a lower, quantile-based value, so the average offers end up about the same (about $139k vs
+$140k). The difference is in *which* homes get a lower bid, or no bid.
 
 The one-flip checks support this. Switching off the ridge blend, the quantile value or the abstain rule
 costs $150–$310 per listing each. `k_disagree` and `max_offer_value` did nothing.
