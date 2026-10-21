@@ -72,7 +72,131 @@ listings are never used in the search.
 
 ## Earth run (id, settings, champion)
 
+Run `run1`, experiment `2cdf0b49d14c4636af961cf963cfd197`. Population 30, 15 workers × 1 CPU, elite
+5%, mutation 30%, genetic drift on, steady-state check from generation 30 over 20 generations. The
+status was `COMPLETED` at generation 179 after about 55 minutes. The 15-minute cap was not enforced.
+
+**Champion** (`work/runs/run1/champion_chromosome.json`):
+- **Value model:** blend of 40% XGBoost (quantile α = 0.15, depth 3, 800 trees, lr 0.069) and 60%
+  ridge (α = 14.4), log price, drop houses > 4,000 sq ft, all feature groups.
+- **Policy:** base margin 13.9%, `k_disagree` ≈ 0, no offer above 15.6% model disagreement,
+  `max_offer_value` $500k (the cap, so inactive), old homes +5.9%, extreme quality +2.3%, high tier −1.1%.
+
+| Per listing, 2007–2009 | Classic | Champion (Earth) | Champion (local re-score) |
+|------|---------|------------------|---------------------------|
+| Fitness | 0.473 | 0.710 | 0.673 |
+| Risk-adjusted | −$160 | +$1,263 | **+$1,038** |
+| Profit / losses | $547 / −$1,416 | $1,611 / −$698 | $1,458 / −$839 |
+| Share bought | 23% | 27% | 27% |
+| 2007 / 2008 / 2009 | −$593 / −$25 / +$173 | +$1,322 / +$1,543 / +$929 | +$1,250 / +$1,041 / +$808 |
+
+**Earth vs local gap.** The local re-score uses the same `fitness.py`, the same chromosome and the
+library versions in `requirements.txt`, and lands $225 per listing below Earth. For random candidates
+the gap is small (about ±$40, the expected worker noise). For the top candidates, all near-copies of
+the champion, it is consistently −$225 to −$280. The likely reason is that the search selected the
+family Earth's workers happened to score high: elites are not re-evaluated, so a lucky score stays.
+This is the winner's curse again, inside the search. I use the **local numbers** below, because
+`make_offers.py` also runs locally.
+
 ## Analysis (guide questions 1–4)
+
+### 1. Did the search behave?
+
+Best score by generation: 0.613 (gen 0) → 0.650 (10) → 0.681 (30) → 0.699 (80) → 0.709 (120) →
+0.7104 (166, the last gain). There was a fast rise to about generation 40, then 36 small gains, and
+then a plateau. Only 2 of 5,400 candidates hit the floor score, and 190 lost money. Already in
+generation 0 the best random candidate beat the classic baseline, so the ranges themselves start in a
+good region.
+
+*Convergence:* healthy rise then plateau. The run stopped as `COMPLETED` 13 generations after the last
+gain, well past the time cap, which Earth did not enforce.
+
+### 2. Is the champion clearly best, or one of a crowd?
+
+A crowd of near-copies. Last-generation ranks 1 / 2 / 5 / 10 score 0.7104 / 0.7104 / 0.7078 / 0.7002.
+The top 10 distinct candidates of the run all lie between 0.709 and 0.710, a spread of about $6 per
+listing.
+
+| Top 5 (Earth) | Score | Base margin | Old / extreme qual / high tier | Share bought |
+|------|-------|-------------|------------------------|--------------|
+| 1 (champion) | 0.710 | 0.139 | +5.9% / +2.3% / −1.1% | 26.5% |
+| 2 | 0.710 | 0.139 | +5.7% / +2.3% / −1.1% | 26.5% |
+| 3 | 0.710 | 0.139 | +5.9% / +3.0% / −1.1% | 26.3% |
+| 4 | 0.710 | 0.139 | +5.9% / +2.3% / −1.1% | 26.4% |
+| 5 | 0.709 | 0.139 | +5.9% / +2.3% / −1.1% | 26.5% |
+
+What they agree on: quantile XGBoost at α = 0.15 (the floor of its range), `drop_big_houses`,
+`log_price`, `w_xgb` ≈ 0.4, base margin 13.9%, no offer above 15.6% disagreement, `k_disagree` ≈ 0, and
+extra margin on old homes. The champion beats the classic baseline in every year (locally +$1,843 /
++$1,066 / +$635 for 2007 / 2008 / 2009). The gain shrinks in 2009, the year most like 2010.
+
+### 3. Which decisions mattered?
+
+Gene shifts from generations 0–4 to 170–179 (mean):
+- **Settled:** `k_disagree` 0.76 → 0.09, `abstain_disagree` 0.28 → 0.17, `base_margin` 0.19 → 0.145,
+  `quantile_alpha` 0.33 → 0.20, `max_offer_value` $346k → $486k (pushed to the cap), `n_estimators`
+  490 → 730.
+- **Stable from the start:** `w_xgb` stayed around 0.40 (its spread narrowed from 0.21 to 0.10).
+
+One-flip checks (local re-score of the champion, `work/analysis/one_flip.py`):
+
+| Switched off | Risk-adj / listing | vs champion | Losses | Share bought |
+|--------------|--------------------|-------------|--------|--------------|
+| — (champion) | $1,038 | — | −$839 | 27% |
+| `w_xgb` = 1 (XGBoost only) | $727 | **−$311** | −$675 | 20% |
+| `use_quantile` off | $874 | **−$164** | −$1,260 | 35% |
+| No abstain | $884 | **−$154** | −$1,101 | 30% |
+| Segment adjustments = 0 | $984 | −$54 | −$903 | 28% |
+| `adj_age_old` = 0 | $984 | −$54 | −$890 | 28% |
+| `adj_qual_extreme` = 0 | $1,010 | −$28 | −$878 | 28% |
+| `abstain_disagree` = 0.50 | $1,036 | −$2 | −$990 | 30% |
+| `k_disagree` = 0 | $1,038 | −$0.4 | −$841 | 27% |
+| `drop_big_houses` off | $1,142 | +$104 | −$734 | 26% |
+
+The ideas that earned the most:
+1. **Blending ridge into the value (+$311).** XGBoost alone buys too few homes at this margin.
+2. **A cautious quantile value (+$164).** Without it, the policy buys 35% of listings and losses rise
+   by half.
+3. **Skipping homes the models disagree on (+$154).** Most of the effect comes from the extreme cases:
+   a threshold of 0.50 instead of 0.156 earns almost the same, but with higher losses.
+
+The old-home margin adds $54. `k_disagree` is a hitchhiker: at 0.002 it does nothing, because the
+abstain rule took over its job. `max_offer_value` sits at the cap and does nothing.
+
+Locally, `drop_big_houses` *hurts* by $104. The whole difference is in 2008–09 (2007 trains on 2006,
+which has no such homes). On Earth the search preferred it, which fits the gap above. This gene is
+not a reliable part of the champion.
+
+### 4. Where does the money come from?
+
+| Per listing, 2007–2009 (local) | Classic | Champion |
+|------|---------|----------|
+| Profit | $547 | $1,458 |
+| Losses | −$1,416 | −$839 |
+| Share bought | 23% | 27% |
+| MAPE | 8.66% | 8.79% |
+| RMSE | $26,954 | $45,952 |
+| Median valuation error | −0.2% | −1.8% |
+| Overvalued by > 10% | 15.1% of homes | 10.7% of homes |
+
+Gain by group of homes, total +$1,198 per listing:
+
+| Homes | Count | Classic buys | Champion buys | Gain / listing |
+|-------|-------|--------------|---------------|----------------|
+| Models disagree > 15.6% (the champion skips them) | 199 | 38 | 0 | **+$600** |
+| Everything else | 1,417 | 326 | 455 | **+$364** |
+| Quality ≤ 4 or ≥ 9 | 192 | 57 | 46 | +$113 |
+| Built before 1920 | 100 | 36 | 19 | +$82 |
+| Sold > $300k | 56 | 4 | 8 | +$39 |
+
+The prices are about as accurate on average (MAPE 8.8% vs 8.7%; the champion's RMSE is higher because
+the quantile model deliberately undervalues some homes by a lot). What changed is *where* the errors
+fall: the champion overvalues far fewer homes, and overvaluing is what loses money.
+
+*For a business owner:* we stopped bidding on the one home in ten our two appraisers disagree about,
+and that alone saves the losses that sank the old approach. On ordinary homes we value a little lower,
+which lets us take a smaller cut, so we win more deals there, and we add a bigger cut on very old or
+unusual homes.
 
 ## 2010 prediction (written before the reveal)
 
