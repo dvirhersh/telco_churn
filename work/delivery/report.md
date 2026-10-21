@@ -232,6 +232,96 @@ proven". The +$1,263 that Earth showed is inflated twice over: by the search sel
 
 ## 2010 result (earth/score_2010.py): classic vs champion, profit, losses, homes bought
 
+Scored once, on the 341 listings, with the real 2010 prices and the same market rule.
+
+| 2010, 341 listings | Classic | Champion (run1) | Difference |
+|------|---------|-----------------|------------|
+| Risk-adjusted profit | −$68,038 | **+$179,199** | +$247,237 |
+| Per listing | **−$200** | **+$526** | **+$725** |
+| Profit (net) / listing | $448 | $993 | +$545 |
+| Losses / listing | −$1,296 | −$936 | $360 less |
+| Homes bought (expected) | 77.4 (22.7%) | 88.7 (26.0%) | +11 homes |
+| Price error | 10.1% | 10.0% | about the same |
+
+**Prediction vs result:**
+
+| | Predicted | Actual |
+|---|---|---|
+| Classic | about −$100 (−$400 to +$150) | −$200 ✓ in range |
+| Champion | about +$550 (+$200 to +$850) | +$526 ✓ |
+| Gain | about +$650 | +$725 |
+| Losses | champion lower | ✓ −$936 vs −$1,296 |
+| Share bought | champion 25–30%, classic 22–26% | ✓ 26.0% vs 22.7% |
+
+**Three numbers, explained:**
+- **Earth's past-year score (+$1,263) is the most optimistic.** The search selected it from about
+  5,400 candidates, including lucky worker scores.
+- **The local past-year re-score (+$1,038) still includes the 2007–08 Edwards homes.** 2010 has none.
+- **2010 (+$526) is the honest one**, close to the 2009 result (+$808) after the small price fall.
+
+Both value models were less accurate in 2010 (about 10% error, against 8.7–8.8% on the past years). The
+champion's losses rose (−$936 per listing, against −$839 on the past years), but the order did not
+change: the champion still makes money and the classic policy still loses it.
+
+### From 0.710 to 0.588: how much was overfitting?
+
+On the fitness scale, the champion's 2010 result is (526 + 3000) / 6000 = **0.588**, against **0.710**
+on Earth. That is a drop of $737 per listing, in three steps:
+
+| Step | Score | $ / listing | Drop | Overfitting? |
+|------|-------|-------------|------|--------------|
+| Earth, 3 past years | 0.710 | +$1,263 | | |
+| Local re-score, 3 past years | 0.673 | +$1,038 | −$225 | **Yes: selection on noise.** The best of about 5,400 scores includes lucky ones, and elites are not re-scored. |
+| Local, 2009 only | 0.635 | +$808 | −$230 | **Mostly yes: fit to 2007–08 quirks.** `drop_big_houses` paid off on the Edwards homes, and is worth −$104 locally. |
+| 2010 test | 0.588 | +$526 | −$282 | **No: a harder year.** The classic policy fell more over the same step (+$173 → −$200, −$373). Prices fell, and price error rose to 10% for both models. |
+
+About **$455 of the $737 is overfitting** to the past years and to the search itself. The rest is 2010
+being harder for everyone.
+
+The classic policy barely moved (0.473 → 0.467) because it tuned one number. The champion tuned 23 genes
+over about 5,400 tries, so it had far more room to fit noise. Yet it still generalised: on unseen homes
+it beat the classic policy by +$725 per listing, with lower losses. **The search overstated its own gain
+by about half; the half that remained was real.** The gain over the classic policy went from +$1,423
+(Earth) to +$725 (2010).
+
+**What I would change in a run2 to overfit less:**
+- **Hold out a year:** search on 2007–08 only, then re-score the top 10 candidates on 2009 before
+  choosing the champion.
+- **Re-score elites** (`recalculate_elite: true`), so a lucky score does not stay.
+- **Fewer genes:** drop the ones that did nothing (`k_disagree`, `max_offer_value`), and question
+  `drop_big_houses`.
+- **Choose among the near-ties by their worst year**, not by the average.
+
+*Class spread:* (fill in after the class comparison)
+
 ## Verdict against the success criterion
 
+1. **+$1,000 per listing over the classic policy: not met.** The gain is +$725 per listing ($247k over
+   the 341 listings).
+2. **Losses no larger than the classic policy's: met.** They are $360 per listing lower (−$936 vs
+   −$1,296), while buying 11 more homes.
+
+**Verdict: better, but not proven**, as predicted. The champion turns a money-losing policy into a
+profitable one on unseen homes, with lower losses. But the gain is below the bar I set, and it comes
+from a single year of 341 homes. The direction is clear; the size is not proven.
+
 ## The champion's price model is about as accurate as the classic one. Where did the money come from?
+
+Not from better prices. In 2010 the price errors are 10.0% vs 10.1%, and on the past years 8.8% vs
+8.7%. The money came from the **decisions**, from where each policy accepts the model's mistakes:
+
+1. **Not bidding where the model is unsure.** The champion skips the homes where ridge and XGBoost
+   disagree by more than 15.6% (27 of the 341 listings in 2010). On the past years those homes were the
+   classic policy's worst: −$600 per listing of the whole set, the largest single source of the gain.
+2. **A cautious value, then a smaller cut.** The quantile model values homes a little low (2.5% below
+   the classic model on the 2010 listings). So it overvalues fewer homes (10.7% vs 15.1% by more than
+   10% on the past years), and it can take a smaller margin (13.9% vs 18%). The result: more deals on
+   ordinary homes, fewer accepted overpayments.
+3. **A bigger cut where homes are hard to price:** pre-1920 homes (+5.9%) and extreme quality levels
+   (+2.3%).
+
+The one-flip checks support this. Switching off the ridge blend, the quantile value or the abstain rule
+costs $150–$310 per listing each. `k_disagree` and `max_offer_value` did nothing.
+
+*In one sentence:* the classic approach asks "what is this home worth?"; the champion also asks "how
+sure am I?", and bids less, or not at all, when the answer is "not very".
