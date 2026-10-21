@@ -1,0 +1,45 @@
+{
+  "experiment_id": "2cdf0b49d14c4636af961cf963cfd197",
+  "status": "COMPLETED",
+  "generation": 179,
+  "fitness_score": 0.7104169441745736,
+  "scalars": {
+    "risk_adj_per_listing": 1262.5016650474415,
+    "profit_per_listing": 1611.2624697161646,
+    "losses_per_listing": -697.5216093374459,
+    "share_bought": 0.26519811401514665,
+    "per_year": {
+      "risk_adj_per_listing_2007": 1321.8277499908083,
+      "risk_adj_per_listing_2008": 1543.4388114003225,
+      "risk_adj_per_listing_2009": 929.2991835934469
+    }
+  },
+  "chromosome": {
+    "w_xgb": 0.4004955229050158,
+    "ridge_alpha": 14.413343821385475,
+    "quantile_alpha": 0.15,
+    "log_price": true,
+    "drop_big_houses": true,
+    "use_quantile": true,
+    "use_age": true,
+    "use_location": true,
+    "use_basement_garage": true,
+    "use_extras": true,
+    "xgb": {
+      "n_estimators": 800,
+      "max_depth": 3,
+      "learning_rate": 0.06900515546159645,
+      "subsample": 0.7845895219179353,
+      "colsample_bytree": 0.535587157920423
+    },
+    "policy": {
+      "base_margin": 0.13937102308840205,
+      "k_disagree": 0.0023245837357733935,
+      "abstain_disagree": 0.15644173501568842,
+      "max_offer_value": 500000.0,
+      "adj_high_tier": -0.011233940894487114,
+      "adj_qual_extreme": 0.023318458933144003,
+      "adj_age_old": 0.05929584742981425
+    }
+  }
+}
