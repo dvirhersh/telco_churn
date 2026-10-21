@@ -200,6 +200,36 @@ unusual homes.
 
 ## 2010 prediction (written before the reveal)
 
+Written on 2026-10-21, before pulling the 2010 prices.
+
+**The offers** (`earth/make_offers.py --name run1`): the champion makes offers on 314 of the 341
+listings and skips 27 (8%) where the models disagree. Its average predicted value is $166,955, against
+$171,287 for the classic model (2.5% lower), and the average offers are about the same ($139k vs
+$140k). The classic policy offers on all 341.
+
+**What I expect 2010 to look like:** 2009, not 2007–08. There are no Edwards-style giants, so
+`drop_big_houses` does nothing, and in 2009 the champion's gain over the classic policy was the
+smallest (+$635 per listing, local). Prices fell a little from 2009, so both value models, trained on
+2006–09, will run slightly high. Every policy then overpays more often, and losses go up for both. The
+champion should be hurt less: its valuation is already lower (the quantile model), and it skips the
+most uncertain homes. The classic policy's 18% margin also protects it, though, and its winning homes
+earn more per deal.
+
+**My numbers** (risk-adjusted profit per listing):
+
+| | Prediction | Basis |
+|---|---|---|
+| Classic | about −$100 (range −$400 to +$150) | +$173 in 2009, minus the effect of the price fall |
+| Champion | about +$550 (range +$200 to +$850) | +$808 in 2009 (local), minus the price fall, and 341 homes is a small, noisy sample |
+| Gain | about **+$650** | close to the 2009 gain |
+| Losses | champion lower than classic | in every past year it lost less while buying more |
+| Share bought | champion 25–30%, classic 22–26% | as in the past years |
+
+**Against the success criterion:** I expect criterion 2 (losses no larger than the classic policy's)
+to pass, and criterion 1 (+$1,000 per listing) to **fail**. The verdict I expect is "better, but not
+proven". The +$1,263 that Earth showed is inflated twice over: by the search selecting lucky scores
+(−$225 locally) and by the 2007–08 Edwards homes that 2010 does not have.
+
 ## 2010 result (earth/score_2010.py): classic vs champion, profit, losses, homes bought
 
 ## Verdict against the success criterion
